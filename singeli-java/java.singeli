@@ -3,7 +3,8 @@ def __le{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __lt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __ge{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __gt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
-def __shr{x:T, y  & 'u'==quality{T}} = fail{'no unsigned shift right'}
+def __shr{x:T, y  & 'u'==quality{T}} = emit{T, 'op >>>', x, y}
+def __shl{x:T, y & issigned{T} & width{T}<32} = cast_i{T, promote{i32,x} << y}
 def reinterpret{T, x & ~knum{x}} = fail{'no reinterpret ', T, x}
 def reinterpret{T, x:T} = x
 def reinterpret{R, x:X & R!=X & width{R}==width{X} & typekind{R}=='primitive' & typekind{X}=='primitive' & quality{R}!='f' & quality{X}!='f'} = emit{R, '', x}

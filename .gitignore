@@ -2,4 +2,4 @@
 /obj/
 /a.out
 perf.data*
-measurements.txt
+measurements*.txt

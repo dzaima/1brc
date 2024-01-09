@@ -8,7 +8,7 @@ java-build: classes/main/Main.class
 run: java-build
 	@java --add-modules=jdk.incubator.vector -cp classes main.Main 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
 
-a.out: gen.c main.cpp
+a.out: gen.c main.cpp header.h
 	@mkdir -p obj
 	$(CC)  -O3 -mavx2 -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
 	$(CXX) -O3 -mavx2 -fno-strict-aliasing -c -o obj/main.o main.cpp
