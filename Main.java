@@ -11,7 +11,7 @@ import java.util.concurrent.locks.*;
 import gen.Gen;
 
 public class Main {
-  static final int num_threads = 8;
+  static int num_threads = 8;
   static final int hash_mask = 0xfff; // i.e. hash table size minus one
   
   static final boolean DEBUG = false;
@@ -299,6 +299,8 @@ public class Main {
   }
   
   public static void main(String[] args) throws Exception {
+    String num_str = System.getenv("THREADS_1BRC");
+    if (num_str!=null && num_str.length()>0) num_threads = Integer.parseInt(num_str);
     if (args.length == 0) args = new String[]{"./measurements.txt"};
     if (args.length==2 && args[1].equals("bench")) {
       Gen g = new Gen();

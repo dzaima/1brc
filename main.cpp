@@ -1,4 +1,3 @@
-int num_threads = 8;
 #include "header.h"
 
 #include <cmath>
@@ -16,6 +15,7 @@ int num_threads = 8;
 
 typedef uint64_t ux;
 constexpr int hash_mask = 0xfff; // i.e. hash table size minus one
+int num_threads = 8;
 
 // copied from main.singeli:
 constexpr int hashv_count = 4;
@@ -184,6 +184,10 @@ void print_stats() {
 }
 
 int main(int argc, char* argv[]) {
+  char* num_str = std::getenv("THREADS_1BRC");
+  if (num_str!=nullptr) num_threads = atoi(num_str);
+  
+  
   int fd = open(argc==1? "measurements.txt" : argv[1], 0);
   if (fd == -1) {
     std::cout << "couldn't open file" << std::endl;
