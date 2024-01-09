@@ -58,6 +58,7 @@ public class Main {
     long[] map_data = long_entries.computeIfAbsent(k, k2 -> {
       long[] t = new long[4];
       t[dt_min] = 9999;
+      t[dt_max] = -9999;
       return t;
     });
     
@@ -161,7 +162,10 @@ public class Main {
   }
   static long[] new_map_data() {
     long[] r = new long[hash_size*4];
-    for (int i = 0; i < hash_size; i++) r[i*4 + dt_min] = 9999;
+    for (int i = 0; i < hash_size; i++) {
+      r[i*4 + dt_min] = 9999;
+      r[i*4 + dt_max] = -9999;
+    }
     return r;
   }
   static void sol(String path) throws Exception {

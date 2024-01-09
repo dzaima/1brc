@@ -40,6 +40,7 @@ static int64_t* get_data(std::string& k) {
   if (!long_entries.count(k)) {
     int64_t* p = long_entries[k] = new int64_t[4]();
     p[dt_min] = 9999;
+    p[dt_max] = -9999;
   }
   return long_entries[k];
 }
@@ -90,10 +91,9 @@ static int read_sample(ux semiPos) {
 
 extern "C" void failed_long(ux nameEnd, int sample) {
   ux nameStart = nameEnd;
-  while (true) {
-    ux prev = nameStart-1;
-    if (prev<0 || input[prev]=='\n') break;
-    nameStart = prev;
+  while (nameStart != 0) {
+    if (input[nameStart-1]=='\n') break;
+    nameStart--;
   }
   failed_long(nameStart, nameEnd, sample);
 }
@@ -109,7 +109,7 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
     sh-= 8;
   }
   if (nameEnd-nameStart >= exp_bulk) {
-    failed_long(nameEnd, sample);
+    failed_long(nameStart, nameEnd, sample);
     return;
   }
   hash^= (uint32_t)(((int32_t)hash) >> 16);
@@ -197,7 +197,10 @@ int main(int argc, char* argv[]) {
   input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
   
   for (ux i = 0; i < hash_size; i++) mapg_hash[i] = def_hash(i);
-  for (ux i = 0; i < hash_size; i++) mapg_data[i*4 + dt_min] = 9999;
+  for (ux i = 0; i < hash_size; i++) {
+    mapg_data[i*4 + dt_min] = 9999;
+    mapg_data[i*4 + dt_max] = -9999;
+  }
   
   
   int periter = core_1brc_periter();
@@ -259,7 +262,7 @@ int main(int argc, char* argv[]) {
   
   // parse head the slow way
   int init_end = start + lbound;
-  if (init_end > flen) init_end = (int)flen;
+  if (init_end > end) init_end = (int)end;
   basic_core(start, init_end);
   start = init_end;
   
