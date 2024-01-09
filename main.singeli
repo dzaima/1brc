@@ -1,7 +1,7 @@
 include 'singeli-java/base'
 def one0 = 0
-def playground = 0
-def one = one0 & ~is_java
+config playground = 0
+def one = one0 & playground
 def lpf1{...vs} = if (one) lprintf{...vs}
 def  pf1{...vs} = if (one)  printf{...vs}
 def lps1{...vs} = if (one) printstr{...vs}
