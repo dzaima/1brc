@@ -11,8 +11,8 @@ run: build-java
 
 a.out: main.cpp
 	@mkdir -p obj
-	$(CC)  -O3 -mavx2 -c -I. -o obj/gen.o gen.c
-	$(CXX) -O3 -mavx2 -c -o obj/main.o main.cpp
+	$(CC)  -O3 -mavx2 -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
+	$(CXX) -O3 -mavx2 -fno-strict-aliasing -g -c -o obj/main.o main.cpp
 	$(CXX) -o a.out obj/gen.o obj/main.o
 
 classes/main/Main.class: Main.java
