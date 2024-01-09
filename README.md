@@ -6,4 +6,4 @@ C version can be built with `make a.out` and then run with `./a.out [path/to/mea
 
 By default, the code is configured to use 8 threads. A different count can be chosen with a `THREADS_1BRC=123` environment variable.
 
-The repo comes with `Gen.java` and `gen.c` pre-generated, but they can be regenerated with `make Gen.java` and `make gen.c` respectively. This'll need `singeli` in `PATH`, or an extra `SINGELI=path/to/Singeli/singeli` argument, and also `bqn` as [CBQN](https://github.com/dzaima/CBQN).
+The repo comes with `Gen.java` and `gen.c` pre-generated, but they can be regenerated with `make singeli-Gen.java` and `make singeli-gen.c` respectively. This'll need `singeli` in `PATH`, or an extra `SINGELI=path/to/Singeli/singeli` argument, and also `bqn` as [CBQN](https://github.com/dzaima/CBQN).
