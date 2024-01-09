@@ -1,0 +1,5 @@
+/classes/
+/obj/
+/a.out
+perf.data*
+measurements.txt

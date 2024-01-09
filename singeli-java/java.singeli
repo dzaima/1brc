@@ -1,0 +1,160 @@
+def setpackage{x} = require{merge{'package ', x}}
+def __le{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __lt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __ge{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __gt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __shr{x:T, y  & 'u'==quality{T}} = fail{'no unsigned shift right'}
+def reinterpret{T, x & ~knum{x}} = fail{'no reinterpret ', T, x}
+def reinterpret{T, x:T} = x
+def reinterpret{R, x:X & R!=X & width{R}==width{X} & typekind{R}=='primitive' & typekind{X}=='primitive' & quality{R}!='f' & quality{X}!='f'} = emit{R, '', x}
+def java_cast{T, x} = {
+  if (knum{x}) reinterpret{T, x}
+  else emit{T, '^cast', x}
+}
+def java_cast{T, x:T} = x
+def cast_i{T, x} = java_cast{T, x}
+
+def ux = i32
+def jint{T} = (T==i32) | (T==u32)
+def __min{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.min', a, b}
+def __max{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.max', a, b}
+def promote{T, x:X} = fail{'bad promote', T, x}
+def promote{T, x:T} = x
+def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
+def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
+def popc{x:T & jint{T}} = emit{i32, 'Integer.bitCount', x}
+def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
+def clz{x:T & jint{T}}                 = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{x:T & isint{T} & width{T}<32}  = clz{promote{u32,ty_u{x}}} - (32-width{T})
+
+
+# vector things
+require{'import jdk.incubator.vector.*'}
+local def canon_i{T} = if ('f'==quality{T}) T else ty_s{T}
+local def canon_i{V & vece{V}} = [vcount{V}]canon_i{eltype{V}}
+
+def reinterpret{R, x:X & R!=X & vece{R} & vece{X} & width{R}==width{X}} = {
+  if (canon_i{R} == canon_i{X}) emit{R, '', x}
+  else emit{R, merge{'method reinterpretAs', match(canon_i{eltype{R}}) {
+    {(i8)}=>'Bytes'
+    {(i16)}=>'Shorts'
+    {(i32)}=>'Ints'
+    {(i64)}=>'Longs'
+  }}, x}
+}
+
+local def lanewise{x:T, y, op} = emit{T, 'method lanewise', x, merge{'VectorOperators.',op}, y}
+
+def __add{x:T, y:T & vece{T}} = emit{T, 'method add', x, y}
+def __sub{x:T, y:T & vece{T}} = emit{T, 'method sub', x, y}
+def __mul{x:T, y:T & vece{T}} = emit{T, 'method mul', x, y}
+
+def __min{x:T, y:T & vecs{T}} = emit{T, 'method min', x, y}
+def __max{x:T, y:T & vecs{T}} = emit{T, 'method max', x, y}
+
+def __and{x:T, y:T & veci{T}} = emit{T, 'method and', x, y}
+def __or {x:T, y:T & veci{T}} = emit{T, 'method or',  x, y}
+def __xor{x:T, y:T & veci{T}} = lanewise{x, y, 'XOR'}
+
+def __shr{x:T, y & vecs{T}} = lanewise{x, y, 'ASHR'}
+def __shr{x:T, y & vecu{T}} = lanewise{x, y, 'LSHR'}
+
+def __subs{x,y} = fail{'no saturating arith'}
+
+local def cmpop{T, n} = merge{'VectorOperators.', if('u'==quality{eltype{T}}) 'UNSIGNED_' else '', n}
+local def elq{T, E} = eltype{T} == E
+local def elq{T, T} = 1
+def __gt{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GT'}, y}
+def __ge{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GE'}, y}
+def __lt{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LT'}, y}
+def __le{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LE'}, y}
+def __eq{x:T, y:T & vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.EQ', y}
+def __ne{x:T, y:T & vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.NE', y}
+
+
+local def vecTypeStr{V} = merge{match(eltype{V}) {
+  {(i64)} => 'Long'; {(i32)} => 'Int'; {(i16)} => 'Short'; {(i8)} => 'Byte'
+  {(u64)} => 'Long'; {(u32)} => 'Int'; {(u16)} => 'Short'; {(u8)} => 'Byte'
+}, 'Vector'}
+local def species{V} = merge{vecTypeStr{V}, '.SPECIES_', fmtnat{width{V}}}
+
+def homMask{x:T} = truncBits{vcount{T}, emit{u64, 'method toLong', x}}
+def broadcast{T, e & vece{T}} = emit{T, 'castmethod broadcast', T, species{T}, promote{eltype{T}, e}}
+
+local def isarr{A} = typekind{A}=='pointer'
+local def arroff{A, V, off} = if (vece{V} and isarr{A} and eltype{A}==eltype{V}) 1 else 0
+def load{V, arr:A, off & arroff{A, V, off}} = emit{V, 'castmethod fromArray', V, species{V}, arr, off}
+def store{arr:A, off, x:V & arroff{A, V, off}} = emit{void, 'method intoArray', x, arr, off}
+def extract{v:V, i & vece{V}} = emit{eltype{V}, 'method lane', v, i}
+
+def gather{E, arr:P, elsOff, idxs:V, scale & scale*8 == width{E}} = {
+  def buf = getenv{'buf_i32'}
+  store{buf, 0, idxs}
+  def n = vcount{V}
+  def V = [n]E
+  emit{V, 'method fromArray', species{V}, arr, elsOff, buf, 0}
+}
+
+# horrible emulation of an unaligned little-endian gather
+def gather{(i64), arr:*i8, elsOff, idxs:V, scale==1 & V==[4]i32} = {
+  def LD = [16]i8 # using [8]i8 & [1]i64 is a lot of times slower
+  def LN = [2]i64
+  make{[4]i64, each{{i} => {
+    extract{LN~~load{LD, arr, elsOff+extract{idxs,i}}, 0}
+  }, range{4}}}
+}
+
+local def expMask{T, m} = emit{ty_u{T}, 'castmethod toVector', ty_u{T}, m}
+def v_eq{a:T, b:T} = expMask{T, a==b}
+def v_ne{a:T, b:T} = expMask{T, a!=b}
+def full_eq{a:T, b:T} = emit{u1, 'method equals', a, b}
+def full_ne{a:T, b:T} = ~(a===b)
+
+def static_arr{E, vs} = emit{*E, '^static_arr', ...vs}
+def object_arr{E, vs} = emit{*E, '^object_arr', ...vs}
+
+def shuf_type{V} = [1]V
+
+def l128shufb_ident{T} = range{vcount{T}}
+def l128shufb{v:V, i:I} = {
+  def B = re_el{i8, V}
+  emit{B, 'method selectFrom', B~~i, B~~v}
+}
+def l128shufb_mask{T} = vcount{T}-1
+
+def shuf{L, v:V, ...is & width{L}==width{V}} = {
+  def S = shuf_type{L}
+  V~~emit{L, 'method rearrange', L~~v, emit{S, 'method shuffleFromValues', species{L}, ...is}}
+}
+
+# significant speedup by replacing a [2]u64 shuf with an equivalent [4]u32 one
+def shuf{([2]u64), x:V, ...is & width{V}==128 & tuplen{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
+
+def make{V, els & vcount{V}==tuplen{els}} = {
+  if (fold{&, each{knum, els}}) {
+    def buf = static_arr{eltype{V}, els}
+    load{V, buf, 0}
+  } else {
+    def buf = getenv{merge{'buf_i', fmtnat{elwidth{V}}}}
+    each{{i,e} => store{buf,i,e}, range{tuplen{els}}, els}
+    load{V, buf, 0}
+  }
+}
+def withbufs{vars,begin==0,end==0,iter} = {
+  withenv{'buf_i64', local_new{i64, 16}, {} => iter{'!', vars}}
+}
+
+def display{a, b} = {}
+def printstr{a} = {}
+def printf{...vs} = if (tuplen{vs}>0) {
+  def syms = each{{v} => kind{v}!='symbol', vs}
+  def space = merge{each{
+    {i, s0} => s0 & select{syms,i+1},
+    range{tuplen{vs}-1}, slice{syms,0,-1}
+  }, 0}
+  each{
+    {o} => emit{void, 'System.out.print', if (kind{o}=='symbol') merge{'"',o,'"'} else o},
+    merge{...each{{n, s} => tup{n, ...s**' '}, vs, space}}
+  }
+}
+def lprintf{...vs} = printf{...vs, '\n'}

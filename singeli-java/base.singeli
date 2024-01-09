@@ -1,0 +1,186 @@
+include 'skin/c'
+include 'arch/c'
+include 'util/tup'
+
+# general things
+def isprim{T} = typekind{T}=='primitive'
+def knum{T} = kind{T}=='number'
+def intty{T} = if (isprim{T} and quality{T}!='f') 1 else 0
+
+def fail{...x} = { show{...x}; '!'{} }
+def assert{x} = fail{x}
+def assert{x==1} = 1
+def broadcast{n, v & knum{n}} = copy{n, v}
+oper ** broadcast infix right 55
+oper ~~ reinterpret infix right 55
+local def indexof{vs, x} = { def {r} = indices{each{__eq{x,.}, vs}}; r }
+
+def truncBits{n, v & n<=8}  = cast_i{u8, v}
+def truncBits{n, v & n==16} = cast_i{u16, v}
+def truncBits{n, v & n==32} = cast_i{u32, v}
+def truncBits{n, v & n==64} = cast_i{u64, v}
+def tern{c, t:T, f:T} = { r:=f; if (c) r=t; r }
+def __min{a:T, b:T & isprim{T}} = tern{a>b, b, a}
+def __max{a:T, b:T & isprim{T}} = tern{a>b, a, b}
+def __add{a:T, (0) & intty{T}} = a # prettier output
+def __add{(0), a:T & intty{T}} = a
+
+
+
+# vector things
+oper === full_eq infix none 20
+oper !== full_ne infix none 20
+def elwidth{T} = width{eltype{T}}
+def tomask{T} = [vcount{T}]u1
+
+def veca{T} = if (kind{T}=='type' and typekind{T}=='vector') 1 else 0
+def vece{T} = if (veca{T} and eltype{T}!=u1) 1 else 0
+def vecs{T} = if (veca{T} and issigned{eltype{T}}) 1 else 0
+def vecu{T} = if (veca{T} and 'u'==quality{eltype{T}} and eltype{T}!=u1) 1 else 0
+def veci{T} = if (veca{T} and 'f'!=quality{eltype{T}} and eltype{T}!=u1) 1 else 0
+
+def re_el{E, V} = [width{V}/width{E}]E
+def re_el{E, x:V} = re_el{E,V} ~~ x
+
+local def qualChange{q} = {
+  def f{w & knum{w}} = primtype{q, w}
+  def f{T & isprim{T}} = primtype{q, width{T}}
+  def f{T & veca{T}} = re_el{f{eltype{T}}, T}
+  def f{x:T} = f{T}~~x
+}
+def ty_u = qualChange{'u'}
+def ty_s = qualChange{'i'}
+def ty_f = qualChange{'f'}
+
+def for{vars,begin,end,iter} = {
+  i:ux = begin
+  while (i < end) {
+    iter{i, vars}
+    i = i+1
+  }
+}
+
+def for_const{vars,begin==0,end,iter} = each{iter{.,vars}, range{end}}
+
+
+def is_java = ~hasarch{'AVX2'}
+if (hasarch{'AVX2'}) {
+  def ux = u64
+  include 'debug/printf'
+  include 'skin/c'
+  include 'arch/c'
+  include 'arch/iintrinsic/basic'
+  include 'clib/malloc'
+  
+  local def to_u32{x} = promote{u32,ty_u{x}}
+  def popc{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_popcountll', x}
+  def popc{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_popcount', to_u32{x}}
+  def ctz{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_ctzll', x}
+  def ctz{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_ctz', x}
+  def clz{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_clzll', x}
+  def clz{x:T & isint{T} & width{T}==32} = emit{ux, '__builtin_clz', x}
+  def clz{x:T & isint{T} & width{T}<32} = clz{to_u32{x}} - (32-width{T})
+  def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
+  def static_arr{E, vs} = { buf:*E = vs; buf }
+  def object_arr{E, vs} = { buf:*E = vs; buf }
+  
+  def full_eq{x:T, y:T & width{T}==128} = homMask{re_el{i8,x} == re_el{i8,y}} == ((1<<vcount{T})-1)
+  def full_ne{x:T, y:T} = ~(x===y)
+  
+  def v_eq{a:T, b:T} = a==b
+  def v_ne{a:T, b:T} = a!=b
+  def widen{E==i64, x:T & T==[4]i32} = emit{[4]i64, '_mm256_cvtepi32_epi64', x}
+  def load{V, p:P, off & veca{V}} = load{*V~~(p+off), 0}
+  def store{p:P, off, x:V & isprim{eltype{P}} & veca{V}} = store{*V~~(p+off), 0, x}
+  def broadcast{V, e & veca{V}} = vec_broadcast{V, e}
+  def homMask{x:T & veci{T} & width{T}==256 & elwidth{T}==8} = emit{u32, '_mm256_movemask_epi8', x}
+  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==8} = emit{u16, '_mm_movemask_epi8', x}
+  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==32} = emit{u8, '_mm_movemask_ps', re_el{f32,x}}
+  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==64} = emit{u8, '_mm_movemask_pd', re_el{f64,x}}
+
+  def blend{f:T, t:T, m:M & width{T}==256} = emit{T, '_mm256_blendv_epi8', f, t, m}
+  def blend{f:T, t:T, m:M & width{T}==128} = emit{T, '_mm_blendv_epi8', f, t, m}
+  
+  def l128shufb_ident{T} = cycle{vcount{T}, range{16}}
+  def l128shufb{v:T, i:I & width{T}==256} = emit{T, '_mm256_shuffle_epi8', v, i}
+  def l128shufb_mask{T & width{T}==256} = 15
+  def shuf{([4]u32), x:V, ...is & width{V}==128 & tuplen{is}==4} = emit{V, '_mm_shuffle_epi32', x, fold{+, is << tup{0,2,4,6}}}
+  def shuf{([2]u64), x:V, ...is & width{V}==128 & tuplen{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
+  
+  def make{V, ...es} = vec_make{V, ...es}
+  
+  def printstr{v0:V, ...g0} = { # \n → $, \0 → ^
+    v:= v0
+    def n = vcount{V}
+    def g = if (tuplen{g0}==0) n else select{g0,0}
+    buf:= undefined{eltype{V}, n}
+    v = blend{v, V**36, v==V**10}
+    v = blend{v, V**94, v==V**0}
+    store{*V~~buf, 0, v}
+    emit{void, 'printf', merge{'"', ...(n/g)**merge{...g**'%c',' '}, '\n"'}, ...each{{i} => load{buf,i}, range{n}}}
+  }
+  def local_new{T, n} = undefined{T, n}
+  def gather{E, ptr:P, elsOff, idxs:V, scale} = {
+    def n = vcount{V}
+    emit{[n]E, match(width{E}, n, elwidth{V}) {
+      {(32), (8), (32)} => '_mm256_i32gather_epi32'
+      {(64), (4), (32)} => '_mm256_i32gather_epi64'
+      {(32), (4), (64)} => '_mm256_i64gather_epi32'
+      {(64), (4), (64)} => '_mm256_i64gather_epi64'
+    }, ptr + elsOff, idxs, scale}
+  }
+  
+  # def gather{(i64), arr:*i8, elsOff, idxs:V, scale==1 & V==[4]u64} = { # emulate the emulated gather on java
+  #   def LD = [16]i8
+  #   def LN = [2]i64
+  #   make{[4]i64, each{{i} => {
+  #     extract{LN~~load{LD, arr, elsOff+extract{idxs,i}}, 0}
+  #   }, range{4}}}
+  # }
+  
+  def withbufs{vars,begin==0,end==0,iter} = iter{'!', vars}
+} else {
+  include 'java/java'
+  setpackage{'gen'}
+  def rare{x} = x
+  def local_new{T, n} = emit{*T, '^newarray', n}
+}
+def widen{E, x:V & E == eltype{V}} = x
+
+
+
+def vptr_store = ux
+def vptr{ptr:P, off0} = {
+  assert{typekind{P}=='pointer'}
+  off:vptr_store = off0
+  def off2{n} = off + n
+  def me{('load'), i} = load{ptr, off2{i}}
+  def me{('store'), i, x} = store{ptr, off2{i}, x}
+  def me{('load'), V, n & veca{V}} = load{V, ptr, off2{n}}
+  def me{('bump'), n} = off+= n # mutates!
+  def me{('add'), n} = vptr{ptr, off2{n}}
+  def me{('to_store'), n} = off2{n}
+  def me{('copy')} = vptr{ptr, off}
+  def me{('sub'), b} = me{'to_store',0} - b{'to_store',0}
+  def me{('ne'), b} = me{'to_store',0} != b{'to_store',0}
+  def me{('lt'), b} = me{'to_store',0} <  b{'to_store',0}
+  def me{('load32') & 8==elwidth{P}} = {
+    fold{|, each{{i} => (cast_i{i32,load{ptr,off+i}}&0xff) << (i*8), range{4}}}
+  }
+  def me{('base_off')} = { t:=off; tup{ptr, t} }
+}
+def vptr_from_store{ptr, store:(vptr_store)} = vptr{ptr, store}
+
+def buflayout{...vs} = {
+  def {counts, lengths, names} = flip{split{3, vs}}
+  def sizes = each{__mul, counts, lengths}
+  def ends = scan{+, sizes}
+  
+  def me{name} = {
+    def i = indexof{names, name}
+    def start = if(i==0) 0 else select{ends, i-1}
+    def me{n} = start + select{lengths,i} * n
+    def me{ptr, n} = vptr{ptr, me{n}}
+  }
+  def me{('.size')} = select{ends, -1}
+}

@@ -1,0 +1,325 @@
+include 'java/base'
+def one0 = 0
+def playground = 0
+def one = one0 & ~is_java
+def lpf1{...vs} = if (one) lprintf{...vs}
+def  pf1{...vs} = if (one)  printf{...vs}
+def lps1{...vs} = if (one) printstr{...vs}
+
+
+
+def bulk = 32 # byte count for maximum-parallel ops
+def exp_bulk = 16 # maximum name length to handle in fast path
+def interleaved = 4 # number of semicolon searches to interleave
+def bufmax = 1000 # TODO 2^n-proc_bulk
+def takes0{x} = match(x) { {(32)} => 3 }
+def HASH = u32
+def HASHV = [4]HASH # buckets to search
+def ri = range{interleaved}
+
+def proc_bulk = bulk/8 # number of lines to handle per iteration of number parsing
+def VIX = [proc_bulk]vptr_store
+
+(if (not playground) require{'header.h'})
+
+
+def iter_count{bulk} = (bufmax/(interleaved*takes0{bulk})) >> 0
+
+def ly = buflayout{
+  1, 128, 'pad',
+  1, interleaved, 'bufsEnds',
+  interleaved, bufmax+proc_bulk, 'bufs',
+  1, 128, 'pad',
+}
+
+def periter = bulk * interleaved * iter_count{bulk}
+fn core_1brc_buf_elts() : ux = ly{'.size'}
+fn core_1brc_periter() : ux = periter
+
+
+# TODO could pack to i64,i32,i16,i16
+def dt_sum = 0
+def dt_num = 1
+def dt_min = 2
+def dt_max = 3
+
+fn core_1brc(
+  ident:i32,
+  buf0:*vptr_store,
+  
+  hash_mask:HASH, # map length (power of two), minus 1
+  
+  # indexed by masked hash
+  map_exp:*i8,    # chunks of exp_bulk
+  map_hash:*HASH, # full hash
+  map_data:*i64,  # chunks of 4: min, max, sum, count
+  
+  inp:*i8,
+  inpOff:ux
+) : void = @withbufs(0) {
+  def takes = takes0{bulk}
+  def V = [bulk]i8
+  
+  def mkbuf{i} = ly{'bufs'}{buf0, i}
+  
+  def bufs = each{mkbuf, ri}
+  
+  ########## SEMICOLON SEARCH ##########
+  def ptrs = each{{i} => vptr{inp, inpOff + i*bulk}, ri}
+  @for(i to iter_count{bulk}) {
+    def ms0 = each{{ptr} => homMask{ptr{'load', V, 0} == V**59}, ptrs}
+    
+    def ms = each{{x} => {m:=x}, ms0}
+    def adv_mask{buf, ptr, m, j, m0tmp} = {
+      m2:= m & (m-1)
+      buf{'store', j, ptr{'to_store', ctz{m}}} # TODO move to_store to a vectorized add at the end?
+      m = m2
+    }
+    @for_const(j to takes) {
+      each{{ptr, buf, m,m0} => adv_mask{buf, ptr, m, j, m0}, ptrs, bufs, ms,ms0}
+    }
+    
+    each{{i, m0, m, buf, ptr} => {
+      pop:= popc{m0}
+      if (rare{pop > takes}) { # TODO move to an outer if that checks if any is over?
+        buf{'bump', takes}
+        do {
+          adv_mask{buf, ptr, m, 0, m0}
+          buf{'bump', 1}
+        } while (m != 0)
+      } else {
+        buf{'bump', pop}
+      }
+      ptr{'bump', bulk*interleaved}
+    }, ri, ms0, ms, bufs, ptrs}
+  }
+  
+  each{{i, buf} => {
+    ly{'bufsEnds'}{buf0,0}{'store', i, buf{'to_store',0}}
+  }, ri, bufs}
+  
+  
+  
+  def VI64 = [proc_bulk]i64;   def VU64 = ty_u{VI64}
+  def VI32 = re_el{i32, VI64}
+  def VI16 = re_el{i16, VI64}
+  def VI8  = re_el{i8,  VI64}; def VU8  = ty_u{VI8}
+  
+  sample_buf:*i16 = object_arr{i16, vcount{VI16}**0}
+  hash_tmp:*i8 = object_arr{i8, (proc_bulk*exp_bulk)**0}
+  hash_buf:*HASH = object_arr{HASH, proc_bulk**0}
+  status_buf:*i8 = object_arr{i8, proc_bulk**0}
+  
+  exp_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
+  
+  def VC = [exp_bulk]i8
+  @for(buf_i to interleaved) {
+    def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
+    def bufE = vptr{buf0, ly{'bufsEnds'}{buf0,0}{'load', buf_i}}
+    # lpf1{'########### ITER ', i, ': ', bufS{'to_store',0}, '..', bufE{'to_store',0}}
+    
+    retctr:ux = 0
+    while (bufS{'lt', bufE}) { # processes 4 (on default config) entries per iteration
+      ########## NUMBER PARSING ##########
+      # orig     aligned  dot pos  off      aligned16
+      # 01234567 01234567 01234567 01234567 01234567
+      # 8.5↩ABC. .8.5↩ABC 00000000 ..0.2.?? ..8.5.??
+      # 17.1↩AB. 17.1↩AB. 11111111 0.1.3.?? 1.7.1.??
+      # 12.8↩AB. 12.8↩AB. 11111111 0.1.3.?? 1.2.8.??
+      # -10.1↩A. 10.1↩A.? 22222222 1.2.4.?? 1.0.1.??
+      
+      idxs:= bufS{'load', VIX, 0}
+      nums:= VI8~~gather{i64, inp, 0, idxs+VIX**1, 1} # each 8-byte group is a number
+      
+      # lps1{nums, 8}
+      # display{'nums', nums}
+      off:= VI8~~(VI64~~(VI32~~v_eq{nums, VI8**46} >> 23) & VI64**3) # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
+      # display{'off0', off}
+      def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
+      off = l128shufb{off, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
+      # display{'off1', off}
+      
+      
+      aligned16:= if (0) {
+        nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
+        si:= make{VI8, l128shufb_ident{VI8}-1} + off
+        si = si & VI8**l128shufb_mask{VI8} # maps -1 to the zero guaranteed by the above, and ≥32 to an unused but valid index
+        aligned:= l128shufb{nums, si} # each i64 is [tens, ones, '.', decimal, ...]
+        VI16~~l128shufb{aligned, make{VI8, low8_64 + cycle{vcount{VI8}, tup{0,2,1,2,3,2,2,2}}}} # expand the digits to take up 16-bit sections, use '.' as a placeholder
+      } else {
+        nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
+        off|= make{VI8, cycle{vcount{VI8}, tup{0,7, 0,7, 0,7, 7,7}}}
+        off+= make{VI8, cycle{vcount{VI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
+        if (is_java) off&= VI8**l128shufb_mask{VI8}
+        # display{'off2', off}
+        VI16~~l128shufb{nums, off}
+      }
+      # display{'aligned16', aligned16-VI16**48}
+      
+      # convert to digits, mapping '\n' and '.' to 0
+      if (is_java) {
+        aligned16 = VI16~~__max{VI8~~aligned16 - VI8**48, VI8**0} # no saturating ops
+      } else {
+        aligned16 = VI16~~__subs{VU8~~aligned16, VU8**48}
+      }
+      
+      aligned16*= make{VI16, cycle{vcount{VI16},  tup{100,10,1,0}}} # multiply by the place
+      
+      # sum the parts
+      aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>32)
+      aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>16)
+      
+      # negate negative numbers
+      neg:= VI16~~v_ne{VI16~~v_eq{nums, VI8**45}, VI16**0}
+      aligned16^= neg
+      aligned16-= neg
+      # aligned16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
+      store{sample_buf, 0, aligned16} # make it available for easy lookup in the loop
+      
+      ########## HASHING & UPDATING ##########
+      # lpf1{'aligned16: ', aligned16}
+      @for (i to __min{bufE{'sub',bufS}, vptr_store~~proc_bulk}) {
+        def VX = [exp_bulk]i8
+        off:= bufS{'load', i}
+        x:= load{VX, inp, off-exp_bulk}
+        m:= homMask{x==VX**10}
+        def get_sample{} = load{sample_buf, i*4}
+        def to_fail{toolong, hash} = { # TODO move to a second loop
+          if (is_java) {
+            emit{void, merge{'main.Main.failed_', if (toolong) 'long' else 'short'}, ident, off, get_sample{}}
+          } else {
+            if (not playground) emit{void, merge{'failed_', if (toolong) 'long' else 'short'}, off, get_sample{}}
+          }
+        }
+        if (rare{m==0}) {
+          to_fail{1, 0} # too long
+        } else {
+          x&= load{VX, exp_mask, clz{m}}
+          assert{width{VX}==128} # needs an extra iteration for 256
+          
+          hv:= HASHV~~x
+          hv^= shuf{[2]u64, hv, 1, 1}
+          hv^= HASHV~~(re_el{u64,hv} >> 32)
+          hv^= HASHV~~(re_el{i32,hv} >> 16)
+          hash:= extract{hv, 0}
+          hv = HASHV**hash # TODO replace with shuffle?
+          
+          # hi64:= extract{[2]i64~~x, 0} ^ extract{[2]i64~~x, 0}
+          # hi32:= cast_i{i32, hi64 ^ (hi64>>32)}
+          # hi32^= hi32>>16
+          # hash:= HASH~~hi32
+          # hv:= HASHV**hash # TODO replace with shuffle?
+          
+          idx:= hash&hash_mask
+          m:= homMask{hv == load{HASHV, map_hash, idx}}
+          if (rare{m==0}) {
+            to_fail{0, hash} # not found: no matching hash
+          } else {
+            idx+= cast_i{HASH, ctz{m}}
+            exp:= load{VX, map_exp, idx*exp_bulk}
+            
+            if (rare{x !== exp}) {
+              to_fail{0, hash} # not found: hash matched, but not expected vector
+            } else {
+              dataoff:= idx*4
+              sample:= promote{i64, get_sample{}}
+              def upd{k, G} = {
+                def p = tup{map_data, dataoff+k}
+                store{...p, G{load{...p}}}
+              }
+              upd{dt_min, {v} => __min{v, sample}}
+              upd{dt_max, {v} => __max{v, sample}}
+              upd{dt_sum, {v} => v + sample}
+              upd{dt_num, {v} => v + 1}
+            }
+          }
+        }
+      }
+      
+      if (one and ++retctr >= 3) return{}
+      
+      bufS{'bump', vcount{VIX}}
+    }
+    
+  }
+}
+
+export{'core_1brc_buf_elts', core_1brc_buf_elts}
+export{'core_1brc_periter', core_1brc_periter}
+export{'core_1brc', core_1brc}
+
+(if (is_java) {
+  fn minibench(b_i64:*i64, b_i8:*i8, b_i32:*i32) : void = @withbufs(0) {
+    def V = [32]i8
+    def VI64 = re_el{i64, V}; def VU64 = ty_u{V}
+    def VI32 = re_el{i32, V}
+    def VI16 = re_el{i16, V}
+    def VI8  = re_el{i8,  V}; def VU8  = ty_u{VI8}
+    @for (i to 10000) {
+      def j = i * vcount{V}
+      def p = if(eltype{V}==i8) b_i8 else  if(eltype{V}==i32) b_i32 else b_i64
+      v:= load{V, p, j}
+      
+      store{p, j, v}
+    }
+  }
+  export{'minibench',minibench}
+})
+
+if (hasarch{'AVX2'}) {
+  include 'clib/malloc'
+  (if (playground) {
+    require{'time.h'}
+    fn nstime() = {
+      buf:*u64 = 2**0
+      emit{void, 'clock_gettime', 0, *void~~buf}
+      load{buf,0}*1e9 + load{buf,1}
+    }
+    main() : void = {
+      buf:*vptr_store = alloc{vptr_store, core_1brc_buf_elts()}
+      require{'sys/mman.h'}
+      require{'fcntl.h'}
+      
+      fd:i32 = emit{i32, 'open', '"/mnt/linux2/git/1brc/measurements.txt"', 0}
+      sz:ux = 1024*1024*100
+      data:*i8 = emit{*i8, 'mmap', 0, sz, 1, 1, fd, 0}
+      hash_mask:HASH = 0xffff
+      hash_size:= hash_mask + vcount{HASHV}
+      map_exp:*i8    = alloc{i8,   hash_size*exp_bulk}
+      map_hash:*HASH = alloc{HASH, hash_size*exp_bulk}
+      map_data:*i64  = alloc{i64,  hash_size*4}
+      
+      def prep{hash, off, name} = {
+        idx:= (hash&hash_mask) + off
+        store{map_hash, idx, hash}
+        store{map_exp, idx*exp_bulk, make{[exp_bulk]i8, name}}
+      }
+      prep{220018025, 0, tup{0, 0, 0, 0, 0, 0, 0, 0, 0, 84, 111, 108, 105, 97, 114, 97}}
+      prep{252515373, 2, tup{0, 0, 0, 0, 0, 0, 0, 0, 65, 117, 99, 107, 108, 97, 110, 100}}
+      prep{521406271, 3, tup{0, 0, 0, 0, 33, 0, 0, 0, 75, 104, 97, 114, 116, 111, 117, 109}}
+      
+      def tone{o, m} = if (one) o else m
+      @for (tone{1, 20}) {
+        sns:= nstime()
+        off:ux = 64
+        def rep = tone{1, 8000}
+        @for (i to rep) {
+          core_1brc(
+            0, buf,
+            
+            hash_mask,
+            map_exp, map_hash, map_data,
+            
+            data, off
+          )
+          off+= periter
+        }
+        ens:= nstime()
+        lprintf{'processed ', rep * periter, ' bytes'}
+        lprintf{'took ', cast_i{f64, ens-sns}/1e9, 's'}
+        lprintf{'ns/byte: ', cast_i{f64, ens-sns} / (rep * periter)}
+        lprintf{'ns/line: ', cast_i{f64, ens-sns} / (rep * periter) * 13.8}
+      }
+    }
+  })
+}

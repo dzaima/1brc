@@ -1,0 +1,183 @@
+#!/usr/bin/env bqn
+Split ← ((⊢-˜+`×¬)∘=⊔⊢)
+Join ← {(≠𝕨)↓∾ 𝕨⊸∾¨ 𝕩}
+SW ← ⊢ ≡ ≠⊸↑˜
+
+lns ← •FLines"/dev/stdin"
+
+prims ← •HashMap´ <˘⍉[
+  ⟨"u1", "boolean"⟩
+  ⟨"u8", "byte"⟩, ⟨"u16", "short"⟩, ⟨"u32", "int"⟩, ⟨"u64", "long"⟩
+  ⟨"i8", "byte"⟩, ⟨"i16", "short"⟩, ⟨"i32", "int"⟩, ⟨"i64", "long"⟩
+  ⟨"void", "void"⟩
+]
+boxed ← •HashMap´ <˘⍉[
+  ⟨"u1", "Boolean"⟩
+  ⟨"u8", "Byte"⟩, ⟨"u16", "Short"⟩, ⟨"u32", "Integer"⟩, ⟨"u64", "Long"⟩
+  ⟨"i8", "Byte"⟩, ⟨"i16", "Short"⟩, ⟨"i32", "Integer"⟩, ⟨"i64", "Long"⟩
+]
+vectors ← •HashMap´ <˘⍉[
+  ⟨"u8", "ByteVector"⟩
+  ⟨"i8", "ByteVector"⟩
+  ⟨"u16", "ShortVector"⟩
+  ⟨"i16", "ShortVector"⟩
+  ⟨"u32", "IntVector"⟩
+  ⟨"i32", "IntVector"⟩
+  ⟨"u64", "LongVector"⟩
+  ⟨"i64", "LongVector"⟩
+  ⟨"u1", "VectorMask<?>"⟩ # extremely wrong; maybe VectorMask<?> works?
+]
+Type ← {
+  ⊑(⊑𝕩)∊"uifv"? prims.Get 𝕩;
+  '*'≡⊑𝕩? "[]"∾˜Type 1↓𝕩;
+  𝕩 SW "[1]["? ∾⟨"VectorShuffle<", boxed.Get (1+·⊑⊐⟜']')⊸↓ 4↓𝕩, ">"⟩;
+  '['≡⊑𝕩? vectors.Get (1+⊑𝕩⊐']')↓𝕩;
+  ! "unknown type "∾𝕩
+}
+Arg ← {
+  '''≡⊑𝕩? ¯1↓1↓𝕩;
+  "!0:u1": "false";
+  "!1:u1": "true";
+  '!'≡⊑𝕩?
+    𝕩 1⊸↓↩
+    i ← ⊑𝕩⊐':'
+    n ← i↑𝕩
+    # n ∾⟜"L"⍟((|•ParseFloat n)≥2⋆31)↩
+    ∾⟨'(',Type (1+i)↓𝕩,')',n,'L'⟩
+    ;
+  𝕩}
+Args ← {'('∾')'∾˜ ¯2↓ ∾ ∾⟜", "¨ Arg¨ 𝕩}
+Lbl ← {•Repr 1+•ParseFloat 1↓𝕩}
+DoGoto ← {∾⟨"switch_num = ", Lbl 𝕩, "; break;"⟩}
+
+resGlobal ← ⟨⟩
+AddGlobal ← {resGlobal∾↩<𝕩⋄@}
+staticDefs ← ⟨⟩
+
+
+
+globalCtr ← 0
+EmitFn ← { 𝕊:
+  fnRes ← ⟨⟩
+  fnDefs ← ⟨⟩
+  Add ← {!fnRes≢@ ⋄ fnRes∾↩<𝕩 ⋄ @}
+  
+  # find variables local to this label block
+  lnum ← +`("lbl"≡⊑)¨ 𝕩
+  vdef ← (("new"⊸≡∨"mut"⊸≡)⊑)¨ 𝕩
+  names ← 1⊑¨vdef/𝕩
+  blocal ← •HashMap⟜(1¨) {((1=+´∘∊)¨ (⊐𝕨)⊔𝕩) / ⍷𝕨}´ (∊⟜names ∾𝕩)⊸/¨ ⟨∾𝕩, (≠¨𝕩)/lnum⟩
+  
+  {𝕊ps:{
+    ("new"≡𝕩) ∨ "mut"≡𝕩?
+      new ← 𝕩≡"new"
+      retty ← {4≤≠ps? Type 3⊑ps; @}
+      void ← {new? "void"≡retty; 0}
+      
+      name ← 1⊑ps
+      local ← blocal.Has name
+      
+      {𝕊: fnDefs∾↩< ∾⟨retty, ' ', name, '=', {"u1":"false"; ⊑(⊑𝕩)∊"iuf"?"0";"null"}3⊑ps, ';'⟩}⍟⊢ (¬void ∨ ¬new) ∧ ¬local
+      
+      InitArr ← {∾⟨"new ", retty, "{", ','Join Arg¨ 𝕩, "}"⟩}
+      Add ∾⟨codeIndent, {void? ""; local∧new? ∾⟨retty,' ',name," = "⟩; name∾" = "},
+        {
+          3≡≠ps? Arg 2⊑ps;
+          "array": InitArr 4↓ps;
+          "val": {
+            𝕩 SW "!tup{"? InitArr Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
+            '?'≡⊑𝕩? ∾⟨"new ",Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
+            Arg 𝕩
+          } 4⊑ps;
+          "emit": {
+            𝕩 SW "castmethod "? ∾⟨'(', Type 5⊑ps, ") ", Arg 6⊑ps, '.', 11↓𝕩, Args 7↓ps⟩;
+            𝕩 SW "method "? ∾⟨Arg 5⊑ps, '.', 7↓𝕩, Args 6↓ps⟩;
+            𝕩 SW "op "? ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩;
+            ("^object_arr"≡𝕩) ∨ static←"^static_arr"≡𝕩?
+              name ← "constarr_"∾•Repr globalCtr+↩1
+              AddGlobal ∾⟨"private final ", static/"static ", retty, " ", name, " = ", InitArr 5↓ps, ';'⟩
+              name;
+            "^newarray": ∾⟨"new ", Type 1↓3⊑ps, '[', 5⊑ps, ']'⟩;
+            "^load": ∾⟨5⊑ps, '[', 6⊑ps, ']'⟩;
+            "^store": ∾⟨5⊑ps, '[', 6⊑ps, "] = ", Arg 7⊑ps⟩;
+            # "^promote": ∾⟨'(', Type 5⊑ps, ") ", 6⊑ps⟩;
+            "^cast": ∾⟨'(', retty, ") ", Arg 5⊑ps⟩;
+            ∾⟨𝕩, Args 5↓ps⟩
+          } ¯1↓1↓4⊑ps;
+          !𝕩
+        } 2⊑ps
+        ';'
+      ⟩
+      ;
+    "ret": Add {"void": codeIndent∾"return;"; ∾⟨codeIndent, "return ", Arg 𝕩, ';'⟩} 1⊑ps;
+    
+    "lbl": Add ∾⟨caseIndent, "case ", Lbl 1⊑ps, ':'⟩;
+    
+    "goto": Add ∾⟨codeIndent, "if (1==1) { ", DoGoto 1⊑ps, " }"⟩;
+    
+    "gotoF": Add ∾⟨codeIndent, "if (!", 1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩;
+    "gotoT": Add ∾⟨codeIndent, "if (",  1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩;
+    
+    (𝕩≡"gotoF") ∨ 𝕩≡"gotoT"?
+      Add ∾⟨codeIndent, "if (", {"gotoF": '!'; "gotoT": ""}𝕩, 1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩
+      ;
+    ! 𝕩
+  }⊑ps}¨ 𝕩
+  
+  fnDefs‿fnRes
+}
+
+
+
+fnIR ← @
+fnLine ← @
+firstFn ← 1
+prevGoes ← 0
+codeIndent ← "    "
+caseIndent ← "  "
+{
+  ⟨⟩: 𝕩;
+  ps ← {' '¨⌾((𝕩=@+160)⊸/) 𝕩}¨ ' ' Split all←𝕩
+  {
+    "beginFn":
+      fnIR ↩ ⟨⟩
+      { 𝕊:
+        AddGlobal "public class Gen {"(⊢∾∾)@+10
+        AddGlobal¨ staticDefs
+        staticDefs ↩ @
+        firstFn ↩ 0
+      }⍟⊢ firstFn
+      fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", {𝕩↓˜1+⊑𝕩⊐'_'} 1⊑ps, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
+      ;
+    "endFn":
+      defs‿body ← EmitFn fnIR
+      
+      AddGlobal fnLine
+      AddGlobal "  int switch_num = 0;"
+      AddGlobal "  "∾' 'Join defs
+      AddGlobal "  while(true) switch(switch_num) {"
+      AddGlobal ∾⟨caseIndent, "case 0:"⟩
+      resGlobal∾↩ body
+      AddGlobal⍟(¬prevGoes) codeIndent ∾ "return;"
+      AddGlobal¨ "  }"‿"}"
+      
+      fnIR↩@
+      ;
+    "require": {
+      "'staticline"≡1⊑ps? !staticDefs≢@ ⋄ staticDefs∾↩< ¯1↓20↓all;
+      "'package"≡1⊑ps? resGlobal ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
+      "'import" ≡1⊑ps?      AddGlobal ∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
+      @
+    };
+    
+    "export": AddGlobal ∾⟨"// todo export"⟩;
+    
+    {fnIR≡@? AddGlobal ' 'Join ps; fnIR∾↩<ps}
+    # ! "idk "∾⊑ps
+  } ⊑ps
+  prevGoes ↩ ⊑(<⊑ps)∊"ret"‿"goto"
+}¨ lns
+
+AddGlobal¨⍟(¬firstFn) ""‿"}"
+
+(•wdpath•file.At ⊑•args) •FLines resGlobal
