@@ -140,7 +140,7 @@ if (hasarch{'AVX2'}) {
   
   def withbufs{vars,begin==0,end==0,iter} = iter{'!', vars}
 } else {
-  include 'java/java'
+  include 'singeli-java/java'
   setpackage{'gen'}
   def rare{x} = x
   def local_new{T, n} = emit{*T, '^newarray', n}

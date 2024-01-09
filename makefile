@@ -20,11 +20,11 @@ classes/main/Main.class: Main.java
 	@javac -d classes --add-modules=jdk.incubator.vector Gen.java Main.java
 
 Gen.java: $(SIJAVA)/emit_java.bqn $(SIJAVA)/java.singeli $(SIJAVA)/base.singeli main.singeli
-	@$(SINGELI) -a x86_64 -t ir -l java=$(SIJAVA) main.singeli | ./$(SIJAVA)/emit_java.bqn Gen.java
+	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | ./$(SIJAVA)/emit_java.bqn Gen.java
 
 gen.c: $(SIJAVA)/java.singeli $(SIJAVA)/base.singeli main.singeli
-	@$(SINGELI) -a avx2 -l java=$(SIJAVA) main.singeli -o gen.c
+	@$(SINGELI) -a avx2 -l singeli-java=$(SIJAVA) main.singeli -o gen.c
 
 
 java-ir:
-	@$(SINGELI) -a x86_64 -t ir -l java=$(SIJAVA) main.singeli
+	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli
