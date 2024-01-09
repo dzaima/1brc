@@ -120,12 +120,13 @@ fn core_1brc(
     retctr:ux = 0
     while (bufS{'lt', bufE}) { # processes 4 (on default config) entries per iteration
       ########## NUMBER PARSING ##########
-      # orig     aligned  dot pos  off      aligned16
-      # 01234567 01234567 01234567 01234567 01234567
-      # 8.5↩ABC. .8.5↩ABC 00000000 ..0.2.?? ..8.5.??
-      # 17.1↩AB. 17.1↩AB. 11111111 0.1.3.?? 1.7.1.??
-      # 12.8↩AB. 12.8↩AB. 11111111 0.1.3.?? 1.2.8.??
-      # -10.1↩A. 10.1↩A.? 22222222 1.2.4.?? 1.0.1.??
+      # nums     off1     off2     aligned16
+      # 01234567 01234567 01234567 01234567
+      # 8.5↩ABC. 00000000 ..0.2.?? ..8.5.??
+      # 17.1↩AB. 11111111 0.1.3.?? 1.7.1.??
+      # 12.8↩AB. 11111111 0.1.3.?? 1.2.8.??
+      # -10.1↩A. 22222222 1.2.4.?? 1.0.1.??
+      #                   '.'=7    '.'=0
       
       idxs:= bufS{'load', VIX, 0}
       nums:= VI8~~gather{i64, inp, 0, idxs+VIX**1, 1} # each 8-byte group is a number

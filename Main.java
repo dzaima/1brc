@@ -314,8 +314,8 @@ public class Main {
       System.exit(0);
     }
     
-    if (args.length==2 && args[1].equals("stats")) {
-      for (int i=0;i<100;i++) {
+    if (args.length==2 && args[1].equals("repeat")) {
+      for (int i=0;i<10;i++) {
         long sns = System.nanoTime();
         sol(args[0]);
         long ens = System.nanoTime();
