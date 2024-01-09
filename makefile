@@ -1,7 +1,8 @@
 SHELL = /usr/bin/env bash
-SINGELI = singeli
 
+SINGELI = $(SINGELI_PATH)/singeli
 SIJAVA = ./singeli-java
+IR_PASS = bqn -e '•Out¨ (•Import"$(SINGELI_PATH)/ir.bqn").Restructure •FLines"/dev/stdin"'
 
 java-build: classes/main/Main.class
 
@@ -24,12 +25,12 @@ GEN_C_DEPS = $(SIJAVA)/java.singeli $(SIJAVA)/base.singeli main.singeli
 endif
 
 Gen.java: $(GEN_JAVA_DEPS)
-	$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | ./$(SIJAVA)/emit_java.bqn Gen.java
+	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS) | ./$(SIJAVA)/emit_java.bqn Gen.java
 
 gen.c: $(GEN_C_DEPS)
-	$(SINGELI) -a avx2 -l singeli-java=$(SIJAVA) main.singeli -o gen.c
+	@$(SINGELI) -a avx2 -l singeli-java=$(SIJAVA) main.singeli -o gen.c
 
 java-ir:
-	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli
+	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS)
 
 .PHONY: java-build java-ir run

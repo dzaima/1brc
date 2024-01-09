@@ -48,13 +48,11 @@ Arg ← {
   𝕩}
 Args ← {'('∾')'∾˜ ¯2↓ ∾ ∾⟜", "¨ Arg¨ 𝕩}
 Lbl ← {•Repr 1+•ParseFloat 1↓𝕩}
-DoGoto ← {∾⟨"switch_num = ", Lbl 𝕩, "; break;"⟩}
 
 resGlobal ← ⟨⟩
 AddGlobal ← {resGlobal∾↩<𝕩⋄@}
 staticDefs ← ⟨⟩
-
-
+caseIndent ← "  "
 
 globalCtr ← 0
 EmitFn ← { 𝕊:
@@ -68,6 +66,14 @@ EmitFn ← { 𝕊:
   names ← 1⊑¨vdef/𝕩
   blocal ← •HashMap⟜(1¨) {((1=+´∘∊)¨ (⊐𝕨)⊔𝕩) / ⍷𝕨}´ (∊⟜names ∾𝕩)⊸/¨ ⟨∾𝕩, (≠¨𝕩)/lnum⟩
   
+  codeIndent ← "    "
+  
+  _makeIf ← { # cond "name[FT]?" _makeIf "body;"
+    cond ← 𝕨
+    ∾⟨codeIndent, "if (", {'F': "!"∾cond; 'T': cond; "1==1"}¯1⊑𝕗, ") ", 𝕩⟩
+  }
+  
+  prevGoes ← 0
   {𝕊ps:{
     ("new"≡𝕩) ∨ "mut"≡𝕩?
       new ← 𝕩≡"new"
@@ -113,16 +119,19 @@ EmitFn ← { 𝕊:
     
     "lbl": Add ∾⟨caseIndent, "case ", Lbl 1⊑ps, ':'⟩;
     
-    "goto": Add ∾⟨codeIndent, "if (1==1) { ", DoGoto 1⊑ps, " }"⟩;
+    𝕩 SW "goto"?     Add (¯2⊑ps) 𝕩 _makeIf ∾⟨"{ switch_num = ", Lbl ¯1⊑ps, "; continue switch_loop; }"⟩;
+    𝕩 SW "break"?    Add (¯2⊑ps) 𝕩 _makeIf ∾⟨"break ",    ¯1⊑ps, ';'⟩;
+    𝕩 SW "continue"? Add (¯2⊑ps) 𝕩 _makeIf ∾⟨"continue ", ¯1⊑ps, ';'⟩;
     
-    "gotoF": Add ∾⟨codeIndent, "if (!", 1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩;
-    "gotoT": Add ∾⟨codeIndent, "if (",  1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩;
+    "beginBlock": Add ∾⟨codeIndent, 1⊑ps, ": {"⟩ ⋄ codeIndent∾↩ "  ";
+    "beginLoop":  Add ∾⟨codeIndent, 1⊑ps, ": while(true) {"⟩ ⋄ codeIndent∾↩ "  ";
+    "endBlock":                                 codeIndent↓˜↩ 2 ⋄ Add ∾⟨codeIndent, "}"⟩;
+    "endLoop":    Add ∾⟨codeIndent, "break;"⟩ ⋄ codeIndent↓˜↩ 2 ⋄ Add ∾⟨codeIndent, "}"⟩;
     
-    (𝕩≡"gotoF") ∨ 𝕩≡"gotoT"?
-      Add ∾⟨codeIndent, "if (", {"gotoF": '!'; "gotoT": ""}𝕩, 1⊑ps, ") { ", DoGoto 2⊑ps, " }"⟩
-      ;
     ! 𝕩
-  }⊑ps}¨ 𝕩
+  }⊑ps ⋄ prevGoes ↩ ⊑(<⊑ps)∊"ret"‿"goto" ⋄ @}¨ 𝕩
+  
+  Add⍟(¬prevGoes) codeIndent ∾ "return;"
   
   fnDefs‿fnRes
 }
@@ -132,9 +141,6 @@ EmitFn ← { 𝕊:
 fnIR ← @
 fnLine ← @
 firstFn ← 1
-prevGoes ← 0
-codeIndent ← "    "
-caseIndent ← "  "
 {
   ⟨⟩: 𝕩;
   ps ← {' '¨⌾((𝕩=@+160)⊸/) 𝕩}¨ ' ' Split all←𝕩
@@ -155,10 +161,9 @@ caseIndent ← "  "
       AddGlobal fnLine
       AddGlobal "  int switch_num = 0;"
       AddGlobal "  "∾' 'Join defs
-      AddGlobal "  while(true) switch(switch_num) {"
+      AddGlobal "  switch_loop: while(true) switch(switch_num) {"
       AddGlobal ∾⟨caseIndent, "case 0:"⟩
       resGlobal∾↩ body
-      AddGlobal⍟(¬prevGoes) codeIndent ∾ "return;"
       AddGlobal¨ "  }"‿"}"
       
       fnIR↩@
@@ -175,7 +180,6 @@ caseIndent ← "  "
     {fnIR≡@? AddGlobal ' 'Join ps; fnIR∾↩<ps}
     # ! "idk "∾⊑ps
   } ⊑ps
-  prevGoes ↩ ⊑(<⊑ps)∊"ret"‿"goto"
 }¨ lns
 
 AddGlobal¨⍟(¬firstFn) ""‿"}"
