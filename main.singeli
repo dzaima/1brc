@@ -106,9 +106,6 @@ fn core_1brc(
   def VI8  = re_el{i8,  VI64}; def VU8  = ty_u{VI8}
   
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
-  hash_tmp:*i8 = object_arr{i8, (proc_bulk*exp_bulk)**0}
-  hash_buf:*HASH = object_arr{HASH, proc_bulk**0}
-  status_buf:*i8 = object_arr{i8, proc_bulk**0}
   
   exp_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
   
