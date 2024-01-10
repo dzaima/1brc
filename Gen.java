@@ -27,7 +27,6 @@ private final static byte[] arr_5 = new byte[]{0,7,0,7,0,7,7,7,0,7,0,7,0,7,7,7,0
 private final static byte[] arr_6 = new byte[]{-1,0,0,0,2,0,0,0,7,8,8,8,10,8,8,8,15,16,16,16,18,16,16,16,23,24,24,24,26,24,24,24};
 private final static short[] arr_7 = new short[]{100,10,1,0,100,10,1,0,100,10,1,0,100,10,1,0};
 public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_map_exp, int[] v4_map_hash, long[] v5_map_data, byte[] v6_inp, int v7_inpOff) {
-  VectorShuffle<Integer> v283 = IntVector.SPECIES_128.shuffleFromValues(2, 3, 2, 3);
   int switch_num = 0;
   
   switch_loop: while(true) switch(switch_num) {
@@ -412,92 +411,95 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
                   ByteVector v280 = (ByteVector) ByteVector.SPECIES_128.fromArray(v184_tail_mask, v275_c);
                   ByteVector v281 = v270_v.and(v280);
                   IntVector v282_hv = v281.reinterpretAsInts();
-                  IntVector v284 = v282_hv.rearrange(v283);
-                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v284);
-                  LongVector v285 = v282_hv.reinterpretAsLongs();
-                  LongVector v286 = v285.lanewise(VectorOperators.LSHR, 32);
-                  IntVector v287 = v286.reinterpretAsInts();
-                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v287);
-                  IntVector v288 = (v282_hv);
-                  IntVector v289 = v288.lanewise(VectorOperators.ASHR, 16);
-                  IntVector v290 = (v289);
-                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v290);
-                  int v291 = v264_i * 1;
-                  boolean v292 = v291 >= v263;
+                  LongVector v283 = v282_hv.reinterpretAsLongs();
+                  long v284 = v283.lane(1);
+                  LongVector v285 = (LongVector) LongVector.SPECIES_128.broadcast(v284);
+                  IntVector v286 = v285.reinterpretAsInts();
+                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v286);
+                  LongVector v287 = v282_hv.reinterpretAsLongs();
+                  LongVector v288 = v287.lanewise(VectorOperators.LSHR, 32);
+                  IntVector v289 = v288.reinterpretAsInts();
+                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v289);
+                  IntVector v290 = (v282_hv);
+                  IntVector v291 = v290.lanewise(VectorOperators.ASHR, 16);
+                  IntVector v292 = (v291);
+                  v282_hv = v282_hv.lanewise(VectorOperators.XOR, v292);
+                  int v293 = v264_i * 1;
+                  boolean v294 = v293 >= v263;
                   l22: {
-                    if (!v292) break l22;
+                    if (!v294) break l22;
                     if (1==1) break l16;
                   }
-                  int v293_hash = v282_hv.lane(0);
-                  int v294 = v293_hash & v2_hash_mask;
-                  int v295_idx = (int) v294;
-                  IntVector v296 = (IntVector) IntVector.SPECIES_128.broadcast(v293_hash);
-                  IntVector v297 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v295_idx);
-                  VectorMask<?> v298 = v296.compare(VectorOperators.EQ, v297);
-                  long v299 = v298.toLong();
-                  byte v300_m = (byte) v299;
-                  boolean v301 = v300_m == (byte)0;
+                  int v295_hash = v282_hv.lane(0);
+                  int v296 = v295_hash & v2_hash_mask;
+                  int v297_idx = (int) v296;
+                  IntVector v298 = (IntVector) IntVector.SPECIES_128.broadcast(v295_hash);
+                  IntVector v299 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v297_idx);
+                  VectorMask<?> v300 = v298.compare(VectorOperators.EQ, v299);
+                  long v301 = v300.toLong();
+                  byte v302_m = (byte) v301;
+                  boolean v303 = v302_m == (byte)0;
                   l24: {
                     l23: {
-                      if (!v301) break l23;
-                      int v302 = v188_off + v291;
-                      int v303 = v1_buf0[v302];
-                      v1_buf0[v13_off] = v303;
-                      int v305 = v291 * 4;
-                      short v306 = v183_temp_buf[v305];
-                      int v307 = (int) v306;
-                      int v308 = v307 << 1;
-                      short v309 = (short) v308;
-                      int v310 = (int) v309;
-                      int v311 = v310 | 0;
-                      int v312 = v13_off + 1;
-                      v1_buf0[v312] = v311;
+                      if (!v303) break l23;
+                      int v304 = v188_off + v293;
+                      int v305 = v1_buf0[v304];
+                      v1_buf0[v13_off] = v305;
+                      int v307 = v293 * 4;
+                      short v308 = v183_temp_buf[v307];
+                      int v309 = (int) v308;
+                      int v310 = v309 << 1;
+                      short v311 = (short) v310;
+                      int v312 = (int) v311;
+                      int v313 = v312 | 0;
+                      int v314 = v13_off + 1;
+                      v1_buf0[v314] = v313;
                       v13_off = v13_off + 2;
                       if (1==1) break l24;
                     }
-                    int v314 = Integer.numberOfTrailingZeros(v300_m);
-                    v295_idx = v295_idx + v314;
-                    int v315 = v295_idx * 16;
-                    ByteVector v316_exp = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v315);
-                    boolean v317 = v316_exp.equals(v281);
-                    boolean v318 = !(v317);
+                    int v316 = Integer.numberOfTrailingZeros(v302_m);
+                    v297_idx = v297_idx + v316;
+                    int v317 = v297_idx * 16;
+                    ByteVector v318_exp = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v317);
+                    boolean v319 = v318_exp.equals(v281);
+                    boolean v320 = !(v319);
                     l26: {
                       l25: {
-                        if (!v318) break l25;
-                        int v319 = v188_off + v291;
-                        int v320 = v1_buf0[v319];
-                        v1_buf0[v13_off] = v320;
-                        int v322 = v291 * 4;
-                        short v323 = v183_temp_buf[v322];
-                        int v324 = (int) v323;
-                        int v325 = v324 << 1;
-                        short v326 = (short) v325;
-                        int v327 = (int) v326;
-                        int v328 = v327 | 0;
-                        int v329 = v13_off + 1;
-                        v1_buf0[v329] = v328;
+                        if (!v320) break l25;
+                        int v321 = v188_off + v293;
+                        int v322 = v1_buf0[v321];
+                        v1_buf0[v13_off] = v322;
+                        int v324 = v293 * 4;
+                        short v325 = v183_temp_buf[v324];
+                        int v326 = (int) v325;
+                        int v327 = v326 << 1;
+                        short v328 = (short) v327;
+                        int v329 = (int) v328;
+                        int v330 = v329 | 0;
+                        int v331 = v13_off + 1;
+                        v1_buf0[v331] = v330;
                         v13_off = v13_off + 2;
                         if (1==1) break l26;
                       }
-                      int v331_dataoff = v295_idx * 4;
-                      int v332 = v291 * 4;
-                      short v333 = v183_temp_buf[v332];
-                      long v334_temp = (long) v333;
-                      int v335 = v331_dataoff + 2;
-                      long v336 = v5_map_data[v335];
-                      long v337 = Math.min(v336, v334_temp);
-                      v5_map_data[v335] = v337;
-                      int v339 = v331_dataoff + 3;
-                      long v340 = v5_map_data[v339];
-                      long v341 = Math.max(v340, v334_temp);
-                      v5_map_data[v339] = v341;
-                      long v343 = v5_map_data[v331_dataoff];
-                      long v344 = v343 + v334_temp;
-                      v5_map_data[v331_dataoff] = v344;
-                      int v346 = v331_dataoff + 1;
-                      long v347 = v5_map_data[v346];
-                      long v348 = v347 + 1L;
-                      v5_map_data[v346] = v348;
+                      int v333_dataoff = v297_idx * 4;
+                      int v334 = v293 * 4;
+                      short v335 = v183_temp_buf[v334];
+                      long v336_temp = (long) v335;
+                      int v337 = v333_dataoff + 2;
+                      long v338 = v5_map_data[v337];
+                      long v339 = Math.min(v338, v336_temp);
+                      v5_map_data[v337] = v339;
+                      int v341 = v333_dataoff + 3;
+                      long v342 = v5_map_data[v341];
+                      long v343 = Math.max(v342, v336_temp);
+                      v5_map_data[v341] = v343;
+                      long v345 = v5_map_data[v333_dataoff];
+                      long v346 = v345 + v336_temp;
+                      v5_map_data[v333_dataoff] = v346;
+                      int v348 = v333_dataoff + 1;
+                      long v349 = v5_map_data[v348];
+                      long v350 = v349 + 1L;
+                      v5_map_data[v348] = v350;
                     }
                   }
                   v264_i = v264_i + 1;
@@ -518,22 +520,22 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
     }
     l28: {
       l27: while(true) {
-        boolean v350 = v12_off < v13_off;
-        if (!v350) break l28;
-        int v351 = v1_buf0[v12_off];
-        int v352 = v12_off + 1;
-        int v353 = v1_buf0[v352];
+        boolean v352 = v12_off < v13_off;
+        if (!v352) break l28;
+        int v353 = v1_buf0[v12_off];
+        int v354 = v12_off + 1;
+        int v355 = v1_buf0[v354];
         v12_off = v12_off + 2;
-        int v354 = v353 & 1;
-        boolean v355 = v354 != 0;
-        int v356 = v353 >> 1;
+        int v356 = v355 & 1;
+        boolean v357 = v356 != 0;
+        int v358 = v355 >> 1;
         l30: {
           l29: {
-            if (!v355) break l29;
-            main.Main.failed_long(v0_ident, v351, v356);
+            if (!v357) break l29;
+            main.Main.failed_long(v0_ident, v353, v358);
             if (1==1) break l30;
           }
-          main.Main.failed_short(v0_ident, v351, v356);
+          main.Main.failed_short(v0_ident, v353, v358);
         }
         if (1==1) continue l27;
         break;
@@ -553,8 +555,8 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
         boolean v5 = v4_i < 1000;
         if (!v5) break l1;
         int v6 = v4_i * 16;
-        ShortVector v7_v = (ShortVector) ShortVector.SPECIES_256.fromArray(v1_ai16, v6);
-        v7_v.intoArray(v1_ai16, v6);
+        ByteVector v7_v = (ByteVector) ByteVector.SPECIES_128.fromArray(v0_ai8, v6);
+        v7_v.intoArray(v0_ai8, v6);
         v4_i = v4_i + 1;
         if (1==1) continue l0;
         break;

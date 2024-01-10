@@ -107,7 +107,10 @@ EmitFn ← { 𝕊:
         "emit": {
           𝕩 SW "castmethod "? ∾⟨'(', Type 5⊑ps, ") ", Arg 6⊑ps, '.', 11↓𝕩, Args 7↓ps⟩;
           𝕩 SW "method "? ∾⟨Arg 5⊑ps, '.', 7↓𝕩, Args 6↓ps⟩;
-          𝕩 SW "op "? ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩;
+          𝕩 SW "op "? {
+            body ← ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩
+            {⊑retty<⊸∊"byte"‿"short"? ∾⟨'(', retty, ") (", body, ')'⟩; body}
+          } 𝕩;
           "^arr":
             name ← "arr_"∾•Repr globalCtr+↩1
             AddGlobal ∾⟨"private final ", ("'static'"≡5⊑ps)/"static ", retty, " ", name, " = ",  ("'init'"≡6⊑ps)◶⟨{𝕊: ∾⟨"new ",Type 1↓3⊑ps,'[',⋈⁼𝕩,']'⟩}, ArrInit⟩ 7↓ps, ';'⟩
@@ -117,6 +120,7 @@ EmitFn ← { 𝕊:
           "^store": ∾⟨5⊑ps, '[', 6⊑ps, "] = ", Arg 7⊑ps⟩;
           # "^promote": ∾⟨'(', Type 5⊑ps, ") ", 6⊑ps⟩;
           "^cast": ∾⟨'(', retty, ") ", Arg 5⊑ps⟩;
+          "^boolpromote": ∾⟨'(', retty, ") (", Arg 5⊑ps, "?1:0)"⟩;
           ∾⟨𝕩, Args 5↓ps⟩
         } ¯1↓1↓4⊑ps;
         !𝕩
@@ -189,6 +193,7 @@ firstFn ← 1
       "'import" ≡1⊑ps?      AddGlobal ∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
       @
     };
+    "'//warn": •term.ErrRaw •ToUTF8 (@+10)∾˜¯1↓' 'Join 1↓ps;
     
     "export": AddGlobal ∾⟨"// todo export"⟩;
     

@@ -6,6 +6,8 @@ include 'util/tup'
 def isprim{T} = typekind{T}=='primitive'
 def knum{T} = kind{T}=='number'
 def intty{T} = if (isprim{T} and quality{T}!='f') 1 else 0
+def intany{x} = knum{x}
+def intany{x:T} = intty{T}
 def same = is
 
 def fail{...x} = { show{...x}; '!'{} }
@@ -14,6 +16,7 @@ def assert{x==1} = 1
 def broadcast{n, v & knum{n}} = copy{n, v}
 oper ** broadcast infix right 55
 oper ~~ reinterpret infix right 55
+oper &~ andnot infix none 35
 local def indexof{vs, x} = { def {r} = indices{each{__eq{x,.}, vs}}; r }
 
 def truncBits{n, v & n<=8}  = cast_i{u8, v}
@@ -25,9 +28,12 @@ def __min{a:T, b:T & isprim{T}} = tern{a>b, b, a}
 def __max{a:T, b:T & isprim{T}} = tern{a>b, a, b}
 def __add{a:T, (0) & intty{T}} = a # prettier output
 def __add{(0), a:T & intty{T}} = a
+def andnot{a, b & intany{a} & intany{b}} = a & ~b
 local def to_u32{x} = promote{u32,ty_u{x}}
 def clz{n, x:T & isint{T} & width{T}>=32} = clz{0, x} - (width{T}-n)
 def clz{n, x:T & isint{T} & width{T}<32} = clz{n, to_u32{x}}
+
+
 
 
 
@@ -42,6 +48,7 @@ def vece{T} = if (veca{T} and eltype{T}!=u1) 1 else 0
 def vecs{T} = if (veca{T} and issigned{eltype{T}}) 1 else 0
 def vecu{T} = if (veca{T} and 'u'==quality{eltype{T}} and eltype{T}!=u1) 1 else 0
 def veci{T} = if (veca{T} and 'f'!=quality{eltype{T}} and eltype{T}!=u1) 1 else 0
+def vecb{T} = if (veca{T} and eltype{T}==u1) 1 else 0
 
 def re_el{E, V} = [width{V}/width{E}]E
 def re_el{E, x:V} = re_el{E,V} ~~ x
@@ -92,6 +99,7 @@ if (hasarch{'AVX2'}) {
   def static_arr{E, n} = undefined{E, n}
   def static_arr{E, vs & kind{vs}=='tuple'} = { buf:*E = vs; buf }
   def object_arr = static_arr
+  def function_arr = static_arr
   
   def full_eq{x:T, y:T & width{T}==128} = homMask{re_el{i8,x} == re_el{i8,y}} == ((1<<vcount{T})-1)
   def full_ne{x:T, y:T} = ~(x===y)
@@ -125,8 +133,8 @@ if (hasarch{'AVX2'}) {
   }
   def shuf{([4]u32), x:V, ...is & width{V}==128 & tuplen{is}==4} = emit{V, '_mm_shuffle_epi32', x, fold{+, is << tup{0,2,4,6}}}
   def shuf{([2]u64), x:V, ...is & width{V}==128 & tuplen{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
-  def shuf{([4]u64), x:V, ...is & width{V}==256 & tuplen{is}==4 & lanes{is,0}} = emit{V, '_mm256_permute_pd', x, base{2, is&1}}
-  def shuf{([8]u32), x:V, ...is & width{V}==256 & tuplen{is}==8 & lanes{is,1}} = emit{V, '_mm256_shuffle_epi32', x, base{4, slice{is,0,4}}}
+  def shuf{([4]u64), x:V, ...is & width{V}==256 & tuplen{is}==4 & lanes{is,0}} = V~~emit{[4]f64, '_mm256_permute_pd', re_el{f64,x}, base{2, is&1}}
+  def shuf{([8]u32), x:V, ...is & width{V}==256 & tuplen{is}==8 & lanes{is,1}} = V~~emit{[8]i32, '_mm256_shuffle_epi32', re_el{i32,x}, base{4, slice{is,0,4}}}
   
   def make{V, ...es} = vec_make{V, ...es}
   def pair{a:T,b:T & width{T}==128} = re_el{eltype{T}, emit{[8]i32, '_mm256_setr_m128i', re_el{i32,a}, re_el{i32,b}}}
