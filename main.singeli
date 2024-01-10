@@ -210,27 +210,30 @@ fn core_1brc(
       }
       
       @for (i to proc_bulk/hashn) {
+        
+        def mask_newline{v} = if (0) {
+          def V64 = re_el{u64, VX}
+          a:= V64~~v_eq{v, VX**10}
+          l:= if (is_java) l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
+          else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
+          a = a | v_ne{l, V64**0}
+          a = a | a >> 8
+          a = a | a >> 16
+          a = a | a >> 32
+          v&~VX~~a
+        } else {
+          mc:= homMask{v == VX**10}
+          c:ux = exp_bulk
+          if (likely{mc!=0}) c = clz{exp_bulk, mc}
+          v & load{VX, tail_mask, c}
+        }
+        
         # load names
         def parts = @for_const(j to hashn) {
           def ij = i*hashn + j
           off:= bufS{'load', ij}
           v:= load{VX, inp, off-exp_bulk}
-          if (0) {
-            def V64 = re_el{u64, VX}
-            a:= V64~~v_eq{v, VX**10}
-            l:= if (is_java) l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
-            else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
-            a = a | v_ne{l, V64**0}
-            a = a | a >> 8
-            a = a | a >> 16
-            a = a | a >> 32
-            v&~VX~~a
-          } else {
-            mc:= homMask{v == VX**10}
-            c:ux = exp_bulk
-            if (likely{mc!=0}) c = clz{exp_bulk, mc}
-            v & load{VX, tail_mask, c}
-          }
+          mask_newline{v}
         }
         
         # hash
