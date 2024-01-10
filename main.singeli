@@ -96,6 +96,7 @@ fn core_1brc(
   
   each{{i, buf} => {
     ly{'bufsEnds'}{buf0,0}{'store', i, buf{'to_store',0}}
+    @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
   }, ri, bufs}
   
   
@@ -107,7 +108,7 @@ fn core_1brc(
   
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
   
-  exp_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
+  tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
   
   ########## PROCESSING ##########
   @for(buf_i to interleaved) {
@@ -116,6 +117,7 @@ fn core_1brc(
     
   ########## PROCESSING ITERATION ##########
     retctr:ux = 0
+    def buf_end = makelabel{}
     while (bufS{'lt', bufE}) { # proc_bulk records per iteration
       ########## NUMBER PARSING ##########
       # nums     off1     off2     aligned16
@@ -177,53 +179,70 @@ fn core_1brc(
       # lpf1{'aligned16: ', aligned16}
       
       
-      ########## HASHING & UPDATING ##########
-      def left = __min{bufE{'sub',bufS}, vptr_store~~proc_bulk}
+      ########## HASHING ##########
+      def left = bufE{'sub',bufS}
       def VX = [exp_bulk]i8
-      @for (i to left) {
-        off:= bufS{'load', i}
-        x:= load{VX, inp, off-exp_bulk}
-        m:= homMask{x==VX**10}
-        def get_temp{} = load{temp_buf, i*4}
-        def to_fail{toolong, hash} = {
-          # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
-          failposC{'store', 0, off}
-          failposC{'store', 1, promote{vptr_store, get_temp{}<<1} | toolong}
-          failposC{'bump', 2}
+      
+      # hashes two rows of names at a time on native; on Java that's slower :/
+      def hashn = if (is_java) 1 else 2
+      def VVX = [hashn * exp_bulk]i8
+      
+      def get_temp{ij} = load{temp_buf, ij*4}
+      def to_fail{ij, toolong} = {
+        # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
+        failposC{'store', 0, bufS{'load', ij}}
+        failposC{'store', 1, promote{vptr_store, get_temp{ij}<<1} | toolong}
+        failposC{'bump', 2}
+      }
+      
+      @for (i to proc_bulk/hashn) {
+        # load names
+        def parts = @for_const(j to hashn) {
+          def ij = i*hashn + j
+          off:= bufS{'load', ij}
+          v:= load{VX, inp, off-exp_bulk}
+          # TODO maybe can do some funky shift+shuffle expand to stay in VVX after initial load?
+          mc:= homMask{v == VX**10}
+          c:ux = exp_bulk
+          if (likely{mc!=0}) c = clz{mc}
+          v & load{VX, tail_mask, c}
         }
-        if (rare{m==0}) {
-          to_fail{1, 0} # too long
-        } else {
-          x&= load{VX, exp_mask, clz{m}}
-          assert{width{VX}==128} # needs an extra iteration for 256
+        
+        # hash
+        def VHX = re_el{HASH, VVX}
+        hv:= VHX~~pair{...parts}
+        hv^= shuf{re_el{u64,VHX}, hv, ...(if (hashn==2) tup{1,1,3,3} else tup{1,1})}
+        hv^= VHX~~(re_el{u64,hv} >> 32)
+        hv^= VHX~~(re_el{i32,hv} >> 16)
+        # hv&= VHX~~re_el{i32,VVX}**255 # for testing hash collision behavior
+        # hx:= shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}
+        @for_const (j to hashn) {
+          def ij = i*hashn + j
+          if (ij >= left) goto{buf_end}
+          hash:= extract{hv, j*4}
           
-          hv:= HASHV~~x
-          hv^= shuf{[2]u64, hv, 1, 1}
-          hv^= HASHV~~(re_el{u64,hv} >> 32)
-          hv^= HASHV~~(re_el{i32,hv} >> 16)
-          hash:= extract{hv, 0}
-          # hash&= 255 # for testing hash collision behavior
-          hv = HASHV**hash # TODO replace with shuffle?
+          idx:= cast_i{ux, hash&hash_mask}
+          # TODO: could do in bulk
+          #   if (rare{(m & (m-1) == 0}) ...
+          #   else ctz & clz or something; or use the blsr just gotten above!
           
-          # hi64:= extract{[2]i64~~x, 0} ^ extract{[2]i64~~x, 0}
-          # hi32:= cast_i{i32, hi64 ^ (hi64>>32)}
-          # hi32^= hi32>>16
-          # hash:= HASH~~hi32
-          # hv:= HASHV**hash # TODO replace with shuffle?
-          
-          idx:= hash&hash_mask
-          m:= homMask{hv == load{HASHV, map_hash, idx}}
-          if (rare{m==0}) {
-            to_fail{0, hash} # not found: no matching hash
+          # TODO: maybe: forbid fast-path 32-char names
+          #   pros:
+          #     don't need to special-case clz{0} for newline finding
+          #     don't need to special-case ctz{0} for exp index, let it load a garbage value and fail
+          #   cons:
+          #     slower for 32-char names
+          m:= homMask{HASHV**hash == load{HASHV, map_hash, idx}}
+          if (rare{m==0}) { # no matching hash value
+            to_fail{ij, 0}
           } else {
-            idx+= cast_i{HASH, ctz{m}}
+            idx+= ctz{m}
             exp:= load{VX, map_exp, idx*exp_bulk}
-            
-            if (rare{x !== exp}) {
-              to_fail{0, hash} # not found: hash matched, but not expected vector
+            if (exp !== select{parts,j}) {
+              to_fail{ij, 0}
             } else {
               dataoff:= idx*4
-              temp:= promote{i64, get_temp{}}
+              temp:= promote{i64, get_temp{ij}}
               def upd{k, G} = {
                 def p = tup{map_data, dataoff+k}
                 store{...p, G{load{...p}}}
@@ -241,6 +260,7 @@ fn core_1brc(
       
       bufS{'bump', vcount{VIX}}
     }
+    setlabel{buf_end}
   }
   
   # handle fails
@@ -276,8 +296,10 @@ export{'core_1brc', core_1brc}
       def j = i * vcount{V}
       v:= load{V, a, j}
       
-      def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
-      v = l128shufb{v, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
+      # v = shuf{[4]u64, v, 1, 1, 3, 3}
+      # v = shuf{[8]u32, v, 0,1,0,1,5,6,5,6}
+      # def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
+      # v = l128shufb{v, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
       # v = shuf{VI8, v, ...low8_64}
       
       store{a, j, V~~v}
@@ -299,7 +321,6 @@ if (hasarch{'AVX2'}) {
       buf:*vptr_store = alloc{vptr_store, core_1brc_buf_elts()}
       require{'sys/mman.h'}
       require{'fcntl.h'}
-      
       
       fd:i32 = emit{i32, 'open', '"/mnt/linux2/git/1brc/measurements.txt"', 0}
       sz:ux = 1024*1024*100

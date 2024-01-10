@@ -112,7 +112,7 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
     sh-= 8;
   }
   ux len = nameEnd-nameStart;
-  if (len >= exp_bulk) {
+  if (len > exp_bulk) {
     failed_long(nameStart, nameEnd, sample);
     return;
   }

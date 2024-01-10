@@ -144,6 +144,14 @@ def make{V, els & vcount{V}==tuplen{els}} = {
   }
 }
 
+def pair{a:T, b:T} = {
+  def D = [vcount{T}*2]eltype{T}
+  def buf = getenv{'make_buf'}{eltype{D}, vcount{D}}
+  store{buf, 0, a}
+  store{buf, vcount{T}, b}
+  load{D, buf, 0}
+}
+
 def display{a, b} = {}
 def printstr{a} = {}
 def printf{...vs} = if (tuplen{vs}>0) {
