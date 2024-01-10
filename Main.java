@@ -127,21 +127,25 @@ public class Main {
     
     int hashm = hash & hash_mask;
     int idx = hashm;
+    
+    glock_r.unlock(); // release this threads read lock to allow the write lock to function
+    // brief moment where this thread doesn't own any lock on mapg; acceptable, as this function handles any case, incl. if the entry is already present
+    glock_w.lock(); // only one thread can be searching for a bucket to update at a time
     while (true) {
       if (mapg_hash[idx] == hash) break;
-      if (mapg_hash[idx] == def_hash(idx)) break;
+      if (mapg_hash[idx] == def_hash(idx)) {
+        mapg_hash[idx] = hash;
+        int len = nameEnd-nameStart;
+        System.arraycopy(input, nameStart, mapg_exp, (idx+1)*exp_bulk - len, len);
+        mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
+      }
       if (++idx == hashm + hashv_count) {
         failed_long(ident, input, nameStart, nameEnd, sample);
+        glock_w.unlock();
+        glock_r.lock();
         return;
       }
     }
-    
-    glock_r.unlock(); // release this threads read lock to allow the write lock to function
-    glock_w.lock();
-    mapg_hash[idx] = hash;
-    int len = nameEnd-nameStart;
-    System.arraycopy(input, nameStart, mapg_exp, (idx+1)*exp_bulk - len, len);
-    mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
     glock_w.unlock();
     glock_r.lock();
     
@@ -246,8 +250,7 @@ public class Main {
           while (true) {
             Long cstart = todoOffsets.poll();
             if (cstart == null) break;
-            long off0 = cstart-lbound;
-            memTo(mem, off0, inp);
+            memTo(mem, cstart-lbound, inp);
             
             int arr_off = lbound;
             for (int j = 0; j < periter_bulk; j++) {
