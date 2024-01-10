@@ -30,7 +30,6 @@ public class Main {
   static final ReadWriteLock glock_rw = new ReentrantReadWriteLock();
   static final Lock glock_w = glock_rw.writeLock(); 
   static final Lock glock_r = glock_rw.readLock();
-  static final Lock long_lock = new ReentrantLock();
   
   // under global lock:
   static String[] mapg_string;
@@ -40,13 +39,20 @@ public class Main {
   static long[][] map_data_per;
   static byte[][] inputs;
   
-  static final HashMap<String, long[]> long_entries = new HashMap<>();
+  static HashMap<String, long[]>[] long_entries;
+  
+  public static void failed_long(int ident, int nameEnd, int sample) { // called by Gen.java
+    failed_long(ident, inputs[ident], nameEnd, sample);
+  }
+  public static void failed_short(int ident, int nameEnd, int sample) { // called by Gen.java
+    hash_slow(ident, inputs[ident], nameEnd, sample);
+  }
   
   private static int def_hash(int i) { // hash to put at mapg_hash[i] such that it's never the expected one
     return i + hashv_count;
   }
   
-  public static void failed_long(byte[] input, int nameStart, int nameEnd, int sample) {
+  public static void failed_long(int ident, byte[] input, int nameStart, int nameEnd, int sample) {
     if (DEBUG && input[nameEnd]!=';') {
       System.out.println("No semi at "+nameEnd+" ("+(nameEnd)+")");
       throw new Error();
@@ -54,8 +60,7 @@ public class Main {
     String k = new String(input, nameStart, nameEnd-nameStart);
     if (DEBUG) System.out.println("failed_long "+k+" "+sample);
     
-    long_lock.lock();
-    long[] map_data = long_entries.computeIfAbsent(k, k2 -> {
+    long[] map_data = long_entries[ident].computeIfAbsent(k, k2 -> {
       long[] t = new long[4];
       t[dt_min] = 9999;
       t[dt_max] = -9999;
@@ -67,20 +72,16 @@ public class Main {
     map_data[didx+dt_num]+= 1;
     map_data[didx+dt_min] = Math.min(map_data[didx+dt_min], sample);
     map_data[didx+dt_max] = Math.max(map_data[didx+dt_max], sample);
-    long_lock.unlock();
   }
   
-  public static void failed_long(int ident, int nameEnd, int sample) {
-    failed_long(inputs[ident], nameEnd, sample);
-  }
-  public static void failed_long(byte[] input, int nameEnd, int sample) {
+  public static void failed_long(int ident, byte[] input, int nameEnd, int sample) {
     int nameStart = nameEnd;
     while (true) {
       int prev = nameStart-1;
       if (prev<0 || input[prev]=='\n') break;
       nameStart = prev;
     }
-    failed_long(input, nameStart, nameEnd, sample);
+    failed_long(ident, input, nameStart, nameEnd, sample);
   }
   
   static int read_sample(byte[] arr, int semiPos) {
@@ -102,10 +103,7 @@ public class Main {
     return neg? -res : res;
   }
   
-  public static void failed_short(int ident, int nameEnd, int sample) {
-    hash_slow(inputs[ident], map_data_per[ident], nameEnd, sample);
-  }
-  public static void hash_slow(byte[] input, long[] map_data, int nameEnd, int sample) {
+  public static void hash_slow(int ident, byte[] input, int nameEnd, int sample) {
     if (DEBUG && sample != read_sample(input,nameEnd)) throw new Error("exp "+read_sample(input,nameEnd)+", got "+sample);
     
     int hash = 0;
@@ -119,7 +117,7 @@ public class Main {
       sh-= 8;
     }
     if (nameEnd-nameStart >= exp_bulk) {
-      failed_long(input, nameEnd, sample);
+      failed_long(ident, input, nameEnd, sample);
       return;
     }
     hash^= hash>>16;
@@ -129,7 +127,7 @@ public class Main {
     int idx = hashm;
     while (mapg_hash[idx] != def_hash(idx) && mapg_hash[idx]!=hash) {
       if (++idx == hashm + hashv_count) {
-        failed_long(input, nameStart, nameEnd, sample);
+        failed_long(ident, input, nameStart, nameEnd, sample);
         return;
       }
     }
@@ -141,6 +139,7 @@ public class Main {
     mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
     glock_w.unlock();
     
+    long[] map_data = map_data_per[ident];
     int didx = idx*4;
     map_data[didx+dt_sum]+= sample;
     map_data[didx+dt_num]+= 1;
@@ -155,9 +154,10 @@ public class Main {
     return Math.round(x)/10d;
   }
   
-  static void basic_core(byte[] arr, long[] map_data, int start, int end) {
+  static void basic_core(byte[] arr, int start, int end) {
+    int ident = num_threads;
     for (int i = start; i < end; i++) {
-      if (arr[i] == ';') hash_slow(arr, map_data, i, read_sample(arr, i));
+      if (arr[i] == ';') hash_slow(ident, arr, i, read_sample(arr, i));
     }
   }
   static long[] new_map_data() {
@@ -168,15 +168,19 @@ public class Main {
     }
     return r;
   }
+  
+  @SuppressWarnings("unchecked")
   static void sol(String path) throws Exception {
     Gen g0 = new Gen();
     
     mapg_exp    = new byte[hash_size*exp_bulk];
     mapg_hash   = new int[hash_size*exp_bulk];
     mapg_string = new String[hash_size];
-    map_data_per = new long[num_threads][];
-    inputs     = new byte[num_threads][];
     for (int i = 0; i < hash_size; i++) mapg_hash[i] = def_hash(i);
+    
+    inputs       = new byte[num_threads][];
+    map_data_per = new long[num_threads+1][];
+    long_entries = (HashMap<String,long[]>[])new HashMap[num_threads+1];
     
     int periter_one = g0.core_1brc_periter();
     int periter_bulk = 50;
@@ -197,8 +201,9 @@ public class Main {
     
     byte[] head = new byte[(int) Math.min(init+rbound, flen)];
     channel.map(FileChannel.MapMode.READ_ONLY, 0, head.length).get(head, 0, head.length);
-    long[] data0 = new_map_data();
-    basic_core(head, data0, 0, init);
+    long_entries[num_threads] = new HashMap<>();
+    map_data_per[num_threads] = new_map_data();
+    basic_core(head, 0, init);
     
     
     
@@ -223,6 +228,7 @@ public class Main {
           
           inputs[ident] = inp;
           map_data_per[ident] = map_data;
+          long_entries[ident] = new HashMap<>();
           int[] buf = new int[g.core_1brc_buf_elts()];
           while (true) {
             Long cstart = todoOffsets.poll();
@@ -257,7 +263,7 @@ public class Main {
     if (left > 0) {
       byte[] tail = new byte[lbound + left];
       channel.map(FileChannel.MapMode.READ_ONLY, start-lbound, tail.length).get(tail, 0, tail.length);
-      basic_core(tail, data0, lbound, lbound+left);
+      basic_core(tail, lbound, lbound+left);
     }
     
     for (Thread t : threads) t.join();
@@ -275,9 +281,11 @@ public class Main {
         es.put(k, v);
       }
     };
-    long_entries.forEach((k, v) -> add.accept(k, v));
-    for (int j = -1; j < num_threads; j++) {
-      long[] map_data = j==-1? data0 : map_data_per[j];
+    for (var long_curr : long_entries) {
+      long_curr.forEach((k, v) -> add.accept(k, v));
+    }
+    for (int j = 0; j < num_threads+1; j++) {
+      long[] map_data = map_data_per[j];
       for (int i = 0; i < hash_size; i++) {
         String k = mapg_string[i];
         if (k==null) continue;
