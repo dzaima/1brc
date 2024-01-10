@@ -113,6 +113,7 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
     return;
   }
   hash^= (uint32_t)(((int32_t)hash) >> 16);
+  // hash&= 255; // for testing hash collision behavior
   
   ux hashm = hash & hash_mask;
   ux idx = hashm;

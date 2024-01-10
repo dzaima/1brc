@@ -122,23 +122,28 @@ public class Main {
       return;
     }
     hash^= hash>>16;
+    // hash&= 255; // for testing hash collision behavior
     if (DEBUG) System.out.println("hash_slow "+new String(input, nameStart, nameEnd-nameStart)+" "+sample);
     
     int hashm = hash & hash_mask;
     int idx = hashm;
-    while (mapg_hash[idx] != def_hash(idx) && mapg_hash[idx]!=hash) {
+    while (true) {
+      if (mapg_hash[idx] == hash) break;
+      if (mapg_hash[idx] == def_hash(idx)) break;
       if (++idx == hashm + hashv_count) {
         failed_long(ident, input, nameStart, nameEnd, sample);
         return;
       }
     }
     
+    glock_r.unlock(); // release this threads read lock to allow the write lock to function
     glock_w.lock();
     mapg_hash[idx] = hash;
     int len = nameEnd-nameStart;
     System.arraycopy(input, nameStart, mapg_exp, (idx+1)*exp_bulk - len, len);
     mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
     glock_w.unlock();
+    glock_r.lock();
     
     long[] map_data = map_data_per[ident];
     int didx = idx*4;
@@ -156,10 +161,12 @@ public class Main {
   }
   
   static void basic_core(byte[] arr, int start, int end) {
+    glock_r.lock();
     int ident = num_threads;
     for (int i = start; i < end; i++) {
       if (arr[i] == ';') hash_slow(ident, arr, i, read_sample(arr, i));
     }
+    glock_r.unlock();
   }
   static long[] new_map_data() {
     long[] r = new long[hash_size*4];

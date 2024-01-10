@@ -202,6 +202,7 @@ fn core_1brc(
           hv^= HASHV~~(re_el{u64,hv} >> 32)
           hv^= HASHV~~(re_el{i32,hv} >> 16)
           hash:= extract{hv, 0}
+          # hash&= 255 # for testing hash collision behavior
           hv = HASHV**hash # TODO replace with shuffle?
           
           # hi64:= extract{[2]i64~~x, 0} ^ extract{[2]i64~~x, 0}
