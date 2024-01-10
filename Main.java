@@ -26,6 +26,7 @@ public class Main {
   static final int dt_max = 3;
   
   static final int hash_size = hash_mask + hashv_count;
+  static final byte[] exp_zeroes = new byte[exp_bulk];
   
   
   static final ReadWriteLock glock_rw = new ReentrantReadWriteLock();
@@ -53,7 +54,7 @@ public class Main {
     return i + hashv_count;
   }
   
-  public static void failed_long(int ident, byte[] input, int nameStart, int nameEnd, int sample) {
+  public static void failed_long_full(int ident, byte[] input, int nameStart, int nameEnd, int sample) {
     if (DEBUG && input[nameEnd]!=';') {
       System.out.println("No semi at "+nameEnd+" ("+(nameEnd)+")");
       throw new Error();
@@ -82,7 +83,7 @@ public class Main {
       if (prev<0 || input[prev]=='\n') break;
       nameStart = prev;
     }
-    failed_long(ident, input, nameStart, nameEnd, sample);
+    failed_long_full(ident, input, nameStart, nameEnd, sample);
   }
   
   static int read_sample(byte[] arr, int semiPos) {
@@ -117,13 +118,14 @@ public class Main {
       nameStart--;
       sh-= 8;
     }
-    if (nameEnd-nameStart >= exp_bulk) {
-      failed_long(ident, input, nameEnd, sample);
+    int len = nameEnd-nameStart;
+    if (len >= exp_bulk) {
+      failed_long_full(ident, input, nameStart, nameEnd, sample);
       return;
     }
     hash^= hash>>16;
     // hash&= 255; // for testing hash collision behavior
-    if (DEBUG) System.out.println("hash_slow "+new String(input, nameStart, nameEnd-nameStart)+" "+sample);
+    if (DEBUG) System.out.println("hash_slow "+new String(input, nameStart, len)+" "+sample);
     
     int hashm = hash & hash_mask;
     int idx = hashm;
@@ -132,16 +134,21 @@ public class Main {
     // brief moment where this thread doesn't own any lock on mapg; acceptable, as this function handles any case, incl. if the entry is already present
     glock_w.lock(); // only one thread can be searching for a bucket to update at a time
     while (true) {
-      if (mapg_hash[idx] == hash) break;
-      if (mapg_hash[idx] == def_hash(idx)) {
-        mapg_hash[idx] = hash;
-        int len = nameEnd-nameStart;
-        System.arraycopy(input, nameStart, mapg_exp, (idx+1)*exp_bulk - len, len);
-        mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
+      int exp_end = (idx+1)*exp_bulk;
+      int exp_start = exp_end - len;
+      if (mapg_hash[idx] == hash && // already present
+          Arrays.equals(mapg_exp, exp_start, exp_end,            input, nameStart, nameEnd) &&
+          Arrays.equals(mapg_exp, exp_end-exp_bulk, exp_start,   exp_zeroes, 0, exp_bulk-len)) {
         break;
       }
-      if (++idx == hashm + hashv_count) {
-        failed_long(ident, input, nameStart, nameEnd, sample);
+      if (mapg_hash[idx] == def_hash(idx)) { // empty spot
+        mapg_hash[idx] = hash;
+        System.arraycopy(input, nameStart, mapg_exp, exp_start, len);
+        mapg_string[idx] = new String(input, nameStart, len);
+        break;
+      }
+      if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
+        failed_long_full(ident, input, nameStart, nameEnd, sample);
         glock_w.unlock();
         glock_r.lock();
         return;
@@ -169,7 +176,10 @@ public class Main {
     glock_r.lock();
     int ident = num_threads;
     for (int i = start; i < end; i++) {
-      if (arr[i] == ';') hash_slow(ident, arr, i, read_sample(arr, i));
+      if (arr[i] == ';') {
+        if (DEBUG) System.out.println();
+        hash_slow(ident, arr, i, read_sample(arr, i));
+      }
     }
     glock_r.unlock();
   }
@@ -198,6 +208,10 @@ public class Main {
     inputs       = new byte[num_threads][];
     map_data_per = new long[num_threads+1][];
     long_entries = (HashMap<String,long[]>[])new HashMap[num_threads+1];
+    for (int i = 0; i < num_threads+1; i++) {
+      long_entries[i] = new HashMap<>();
+      map_data_per[i] = new_map_data();
+    }
     
     int periter_one = g0.core_1brc_periter();
     int periter_bulk = 50;
@@ -219,8 +233,6 @@ public class Main {
     
     byte[] head = new byte[(int) Math.min(init+rbound, flen)];
     memTo(mem, 0, head);
-    long_entries[num_threads] = new HashMap<>();
-    map_data_per[num_threads] = new_map_data();
     basic_core(head, 0, init);
     
     
@@ -228,7 +240,6 @@ public class Main {
     // parse core the fast way
     ConcurrentLinkedQueue<Long> todoOffsets = new ConcurrentLinkedQueue<>();
     long start = init;
-    int pagesize = 4096;
     int inpsize = lbound + periter + rbound;
     while (start+inpsize < flen) {
       todoOffsets.add(start);
@@ -241,12 +252,11 @@ public class Main {
       Runnable run = () -> {
         try {
           Gen g = new Gen();
-          long[] map_data = new_map_data();
+          long[] map_data = map_data_per[ident];
           byte[] inp = new byte[inpsize];
           
           inputs[ident] = inp;
           map_data_per[ident] = map_data;
-          long_entries[ident] = new HashMap<>();
           int[] buf = new int[g.core_1brc_buf_elts()];
           while (true) {
             Long cstart = todoOffsets.poll();

@@ -26,6 +26,7 @@ constexpr int dt_min = 2;
 constexpr int dt_max = 3;
 
 constexpr int hash_size = hash_mask + hashv_count;
+char exp_zeroes[exp_bulk];
 
 char* input;
 int64_t     mapg_data  [hash_size*4];
@@ -87,7 +88,9 @@ static int read_sample(ux semiPos) {
   
   return neg? -res : res;
 }
-
+static bool Arrays_equals(char* a1, ux s1, ux e1, char* a2, ux s2, ux e2) {
+  return memcmp(a1+s1, a2+s2, e1-s1) == 0;
+}
 
 extern "C" void failed_long(ux nameEnd, int sample) {
   ux nameStart = nameEnd;
@@ -108,7 +111,8 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
     nameStart--;
     sh-= 8;
   }
-  if (nameEnd-nameStart >= exp_bulk) {
+  ux len = nameEnd-nameStart;
+  if (len >= exp_bulk) {
     failed_long(nameStart, nameEnd, sample);
     return;
   }
@@ -117,17 +121,25 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
   
   ux hashm = hash & hash_mask;
   ux idx = hashm;
-  while (mapg_hash[idx] != def_hash(idx) && mapg_hash[idx]!=hash) {
-    if (++idx == hashm + hashv_count) {
+  while (true) {
+    int exp_end = (idx+1)*exp_bulk;
+    int exp_start = exp_end - len;
+    if (mapg_hash[idx] == hash && // already present
+        Arrays_equals((char*)mapg_exp, exp_start, exp_end,            input, nameStart, nameEnd) &&
+        Arrays_equals((char*)mapg_exp, exp_end-exp_bulk, exp_start,   exp_zeroes, 0, exp_bulk-len)) {
+      break;
+    }
+    if (mapg_hash[idx] == def_hash(idx)) { // empty spot
+      mapg_hash[idx] = hash;
+      memcpy((char*)mapg_exp + (idx+1)*exp_bulk - len, input+nameStart, len);
+      mapg_string[idx] = {input+nameStart, len};
+      break;
+    }
+    if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
       failed_long(nameStart, nameEnd, sample);
       return;
     }
   }
-  
-  mapg_hash[idx] = hash;
-  ux len = nameEnd-nameStart;
-  memcpy((char*)mapg_exp + (idx+1)*exp_bulk - len, input+nameStart, len);
-  mapg_string[idx] = {input+nameStart, nameEnd-nameStart};
   
   ux didx = idx*4;
   int64_t* map_data = mapg_data;
