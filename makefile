@@ -7,7 +7,7 @@ IR_PASS = bqn -e '•Out¨ (•Import"$(SINGELI_PATH)/ir.bqn").Restructure •FL
 java-build: classes/main/Main.class
 
 run: java-build
-	@java --add-modules=jdk.incubator.vector -cp classes main.Main 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
+	@java --add-modules=jdk.incubator.vector --enable-preview -cp classes main.Main 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
 
 a.out: gen.c main.cpp header.h
 	@mkdir -p obj
@@ -17,7 +17,7 @@ a.out: gen.c main.cpp header.h
 
 classes/main/Main.class: Gen.java Main.java
 	@mkdir -p classes
-	@javac -d classes --add-modules=jdk.incubator.vector Gen.java Main.java
+	@javac -d classes --enable-preview --release 21 --add-modules=jdk.incubator.vector Gen.java Main.java
 
 ifeq ($(GEN),1)
 GEN_JAVA_DEPS = $(SIJAVA)/emit_java.bqn $(SIJAVA)/java.singeli $(SIJAVA)/base.singeli main.singeli

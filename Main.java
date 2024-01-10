@@ -1,5 +1,6 @@
 package main;
 import jdk.incubator.vector.*;
+import java.lang.foreign.*;
 import java.io.*;
 import java.util.*;
 import java.util.function.*;
@@ -169,6 +170,10 @@ public class Main {
     return r;
   }
   
+  static void memTo(MemorySegment mem, long off, byte[] tgt) {
+    mem.asSlice(off, tgt.length).asByteBuffer().get(tgt, 0, tgt.length);
+  }
+  
   @SuppressWarnings("unchecked")
   static void sol(String path) throws Exception {
     Gen g0 = new Gen();
@@ -191,6 +196,7 @@ public class Main {
     
     FileChannel channel = new RandomAccessFile(path, "r").getChannel();
     long flen = channel.size();
+    MemorySegment mem = channel.map(FileChannel.MapMode.READ_ONLY, 0, flen, Arena.global());
     
     
     
@@ -200,7 +206,7 @@ public class Main {
     if (init > flen) init = (int)flen;
     
     byte[] head = new byte[(int) Math.min(init+rbound, flen)];
-    channel.map(FileChannel.MapMode.READ_ONLY, 0, head.length).get(head, 0, head.length);
+    memTo(mem, 0, head);
     long_entries[num_threads] = new HashMap<>();
     map_data_per[num_threads] = new_map_data();
     basic_core(head, 0, init);
@@ -234,8 +240,7 @@ public class Main {
             Long cstart = todoOffsets.poll();
             if (cstart == null) break;
             long off0 = cstart-lbound;
-            int roundoff = (int)off0 & (pagesize-1);
-            channel.map(FileChannel.MapMode.READ_ONLY, off0-roundoff, inpsize+roundoff).position(roundoff).get(inp, 0, inpsize);
+            memTo(mem, off0, inp);
             
             int arr_off = lbound;
             for (int j = 0; j < periter_bulk; j++) {
@@ -267,7 +272,7 @@ public class Main {
     int left = (int)(flen-start);
     if (left > 0) {
       byte[] tail = new byte[lbound + left];
-      channel.map(FileChannel.MapMode.READ_ONLY, start-lbound, tail.length).get(tail, 0, tail.length);
+      memTo(mem, start-lbound, tail);
       basic_core(tail, lbound, lbound+left);
     }
     
