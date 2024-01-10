@@ -220,7 +220,7 @@ public class Main {
     ArrayList<Thread> threads = new ArrayList<>();
     for (int i = 0; i < num_threads; i++) {
       int ident = i;
-      Thread t = new Thread(() -> {
+      Runnable run = () -> {
         try {
           Gen g = new Gen();
           long[] map_data = new_map_data();
@@ -251,9 +251,14 @@ public class Main {
             }
           }
         } catch (Exception e) { e.printStackTrace(); System.exit(1); }
-      });
-      threads.add(t);
-      t.start();
+      };
+      if (num_threads == 1) {
+        run.run();
+      } else {
+        Thread t = new Thread(run);
+        t.start();
+        threads.add(t);
+      }
     }
     
     
