@@ -140,20 +140,12 @@ fn core_1brc(
       # display{'off1', off}
       
       
-      aligned16:= if (0) {
-        nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
-        si:= make{VI8, l128shufb_ident{VI8}-1} + off
-        si = si & VI8**l128shufb_mask{VI8} # maps -1 to the zero guaranteed by the above, and ≥32 to an unused but valid index
-        aligned:= l128shufb{nums, si} # each i64 is [tens, ones, '.', decimal, ...]
-        VI16~~l128shufb{aligned, make{VI8, low8_64 + cycle{vcount{VI8}, tup{0,2,1,2,3,2,2,2}}}} # expand the digits to take up 16-bit sections, use '.' as a placeholder
-      } else {
-        nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
-        off|= make{VI8, cycle{vcount{VI8}, tup{0,7, 0,7, 0,7, 7,7}}}
-        off+= make{VI8, cycle{vcount{VI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
-        if (is_java) off&= VI8**l128shufb_mask{VI8}
-        # display{'off2', off}
-        VI16~~l128shufb{nums, off}
-      }
+      nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
+      off|= make{VI8, cycle{vcount{VI8}, tup{0,7, 0,7, 0,7, 7,7}}}
+      off+= make{VI8, cycle{vcount{VI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
+      if (is_java) off&= VI8**l128shufb_mask{VI8}
+      # display{'off2', off}
+      aligned16:= VI16~~l128shufb{nums, off}
       # display{'aligned16', aligned16-VI16**48}
       
       # convert to digits, mapping '\n' and '.' to 0
