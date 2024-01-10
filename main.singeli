@@ -11,13 +11,13 @@ def bulk = 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
 def interleaved = 4 # number of semicolon searches to interleave
 def bufmax = 1000 # TODO 2^n-proc_bulk
-def takes0{x} = match(x) { {(32)} => 3 }
-def HASH = u32
+def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
+def HASH = u32 # full hash
 def HASHV = [4]HASH # buckets to search
-def ri = range{interleaved}
 
-def proc_bulk = bulk/8 # number of lines to handle per iteration of number parsing
+def proc_bulk = 4 # number of records to handle in a processing iteration
 def VIX = [proc_bulk]vptr_store
+def ri = range{interleaved}
 
 (if (not playground) require{'header.h'})
 
@@ -109,14 +109,14 @@ fn core_1brc(
   
   exp_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
   
-  def VC = [exp_bulk]i8
+  ########## PROCESSING ##########
   @for(buf_i to interleaved) {
     def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
     def bufE = vptr{buf0, ly{'bufsEnds'}{buf0,0}{'load', buf_i}}
-    # lpf1{'########### ITER ', i, ': ', bufS{'to_store',0}, '..', bufE{'to_store',0}}
     
+  ########## PROCESSING ITERATION ##########
     retctr:ux = 0
-    while (bufS{'lt', bufE}) { # processes 4 (on default config) entries per iteration
+    while (bufS{'lt', bufE}) { # proc_bulk records per iteration
       ########## NUMBER PARSING ##########
       # nums     off1     off2     aligned16
       # 01234567 01234567 01234567 01234567
