@@ -138,6 +138,7 @@ public class Main {
         int len = nameEnd-nameStart;
         System.arraycopy(input, nameStart, mapg_exp, (idx+1)*exp_bulk - len, len);
         mapg_string[idx] = new String(input, nameStart, nameEnd-nameStart);
+        break;
       }
       if (++idx == hashm + hashv_count) {
         failed_long(ident, input, nameStart, nameEnd, sample);
