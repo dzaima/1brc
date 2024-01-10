@@ -85,23 +85,23 @@ EmitFn ← { 𝕊:
       
       {𝕊: fnDefs∾↩< ∾⟨retty, ' ', name, '=', {"u1":"false"; ⊑(⊑𝕩)∊"iuf"?"0";"null"}3⊑ps, ';'⟩}⍟⊢ (¬void ∨ ¬new) ∧ ¬local
       
-      InitArr ← {∾⟨"new ", retty, "{", ','Join Arg¨ 𝕩, "}"⟩}
+      ArrInit ← {∾⟨"new ", retty, "{", ','Join Arg¨ 𝕩, "}"⟩}
       Add ∾⟨codeIndent, {void? ""; local∧new? ∾⟨retty,' ',name," = "⟩; name∾" = "},
         {
           3≡≠ps? Arg 2⊑ps;
-          "array": InitArr 4↓ps;
+          "array": ArrInit 4↓ps;
           "val": {
-            𝕩 SW "!tup{"? InitArr Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
-            '?'≡⊑𝕩? ∾⟨"new ",Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
+            𝕩 SW "!tup{"? ArrInit Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
+            '?'≡⊑𝕩? ∾⟨"new ", Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
             Arg 𝕩
           } 4⊑ps;
           "emit": {
             𝕩 SW "castmethod "? ∾⟨'(', Type 5⊑ps, ") ", Arg 6⊑ps, '.', 11↓𝕩, Args 7↓ps⟩;
             𝕩 SW "method "? ∾⟨Arg 5⊑ps, '.', 7↓𝕩, Args 6↓ps⟩;
             𝕩 SW "op "? ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩;
-            ("^object_arr"≡𝕩) ∨ static←"^static_arr"≡𝕩?
-              name ← "constarr_"∾•Repr globalCtr+↩1
-              AddGlobal ∾⟨"private final ", static/"static ", retty, " ", name, " = ", InitArr 5↓ps, ';'⟩
+            "^arr":
+              name ← "arr_"∾•Repr globalCtr+↩1
+              AddGlobal ∾⟨"private final ", ("'static'"≡5⊑ps)/"static ", retty, " ", name, " = ",  ("'init'"≡6⊑ps)◶⟨{𝕊: ∾⟨"new ",Type 1↓3⊑ps,'[',⋈⁼𝕩,']'⟩}, ArrInit⟩ 7↓ps, ';'⟩
               name;
             "^newarray": ∾⟨"new ", Type 1↓3⊑ps, '[', 5⊑ps, ']'⟩;
             "^load": ∾⟨5⊑ps, '[', 6⊑ps, ']'⟩;

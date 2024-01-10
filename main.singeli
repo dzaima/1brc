@@ -56,7 +56,7 @@ fn core_1brc(
   
   inp:*i8,
   inpOff:ux
-) : void = @withbufs(0) {
+) : void = @withbufs(object_arr) {
   def takes = takes0{bulk}
   def V = [bulk]i8
   

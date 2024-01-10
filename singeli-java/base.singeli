@@ -62,6 +62,7 @@ def for{vars,begin,end,iter} = {
 
 def for_const{vars,begin==0,end,iter} = each{iter{.,vars}, range{end}}
 
+def withbufs{vars,begin==0,G,iter} = withenv{'make_buf', G, {} => iter{'!', vars}}
 
 def is_java = ~hasarch{'AVX2'}
 if (hasarch{'AVX2'}) {
@@ -138,7 +139,6 @@ if (hasarch{'AVX2'}) {
   #   }, range{4}}}
   # }
   
-  def withbufs{vars,begin==0,end==0,iter} = iter{'!', vars}
 } else {
   include 'singeli-java/java'
   setpackage{'gen'}

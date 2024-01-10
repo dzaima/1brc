@@ -111,8 +111,10 @@ def v_ne{a:T, b:T} = expMask{T, a!=b}
 def full_eq{a:T, b:T} = emit{u1, 'method equals', a, b}
 def full_ne{a:T, b:T} = ~(a===b)
 
-def static_arr{E, vs} = emit{*E, '^static_arr', ...vs}
-def object_arr{E, vs} = emit{*E, '^object_arr', ...vs}
+def static_arr{E, vs & kind{vs}=='tuple'} = emit{*E, '^arr', 'static', 'init', ...vs}
+def object_arr{E, vs & kind{vs}=='tuple'} = emit{*E, '^arr', 'object', 'init', ...vs}
+def static_arr{E, n & knum{n}} = emit{*E, '^arr', 'static', 'len', n}
+def object_arr{E, n & knum{n}} = emit{*E, '^arr', 'object', 'len', n}
 
 def shuf_type{V} = [1]V
 
@@ -136,13 +138,10 @@ def make{V, els & vcount{V}==tuplen{els}} = {
     def buf = static_arr{eltype{V}, els}
     load{V, buf, 0}
   } else {
-    def buf = getenv{merge{'buf_i', fmtnat{elwidth{V}}}}
+    def buf = getenv{'make_buf'}{eltype{V}, vcount{V}}
     each{{i,e} => store{buf,i,e}, range{tuplen{els}}, els}
     load{V, buf, 0}
   }
-}
-def withbufs{vars,begin==0,end==0,iter} = {
-  withenv{'buf_i64', local_new{i64, 16}, {} => iter{'!', vars}}
 }
 
 def display{a, b} = {}
