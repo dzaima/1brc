@@ -27,6 +27,7 @@ private final static byte[] arr_5 = new byte[]{0,7,0,7,0,7,7,7,0,7,0,7,0,7,7,7,0
 private final static byte[] arr_6 = new byte[]{-1,0,0,0,2,0,0,0,7,8,8,8,10,8,8,8,15,16,16,16,18,16,16,16,23,24,24,24,26,24,24,24};
 private final static short[] arr_7 = new short[]{100,10,1,0,100,10,1,0,100,10,1,0,100,10,1,0};
 public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_map_exp, int[] v4_map_hash, long[] v5_map_data, byte[] v6_inp, int v7_inpOff) {
+  VectorShuffle<Integer> v283 = IntVector.SPECIES_128.shuffleFromValues(2, 3, 2, 3);
   int switch_num = 0;
   
   switch_loop: while(true) switch(switch_num) {
@@ -411,7 +412,6 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
                   ByteVector v280 = (ByteVector) ByteVector.SPECIES_128.fromArray(v184_tail_mask, v275_c);
                   ByteVector v281 = v270_v.and(v280);
                   IntVector v282_hv = v281.reinterpretAsInts();
-                  VectorShuffle<Integer> v283 = IntVector.SPECIES_128.shuffleFromValues(2, 3, 2, 3);
                   IntVector v284 = v282_hv.rearrange(v283);
                   v282_hv = v282_hv.lanewise(VectorOperators.XOR, v284);
                   LongVector v285 = v282_hv.reinterpretAsLongs();
@@ -554,10 +554,6 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
         if (!v5) break l1;
         int v6 = v4_i * 16;
         ShortVector v7_v = (ShortVector) ShortVector.SPECIES_256.fromArray(v1_ai16, v6);
-        LongVector v8 = v7_v.reinterpretAsLongs();
-        VectorShuffle<Long> v9 = LongVector.SPECIES_256.shuffleFromValues(1, 1, 3, 3);
-        LongVector v10 = v8.rearrange(v9);
-        v7_v = v10.reinterpretAsShorts();
         v7_v.intoArray(v1_ai16, v6);
         v4_i = v4_i + 1;
         if (1==1) continue l0;

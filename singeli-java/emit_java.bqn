@@ -62,9 +62,10 @@ caseIndent ← "  "
 
 globalCtr ← 0
 EmitFn ← { 𝕊:
-  fnRes ← ⟨⟩
-  fnDefs ← ⟨⟩
-  Add ← {!fnRes≢@ ⋄ fnRes∾↩<𝕩 ⋄ @}
+  mainLns ← ⟨⟩
+  
+  fnDefs ← ⟨⟩ ⋄ Add ← {mainLns∾↩<𝕩 ⋄ @}
+  beginLns ← ⟨⟩ ⋄ AddBegin ← {beginLns∾↩<𝕩 ⋄ @}
   
   # find variables local to this label block
   lnum ← +`("lbl"≡⊑)¨ 𝕩
@@ -91,35 +92,42 @@ EmitFn ← { 𝕊:
       
       {𝕊: fnDefs∾↩< ∾⟨retty, ' ', name, '=', {"u1":"false"; ⊑(⊑𝕩)∊"iuf"?"0";"null"}3⊑ps, ';'⟩}⍟⊢ (¬void ∨ ¬new) ∧ ¬local
       
+      atBegin ← "new"‿"emit"‿"'^atbegin'" ≡ (1‿0‿1‿0‿1↑˜≠)⊸/ ps
+      {atBegin? ps (4⊸↑∾5⊸↓)↩; @}
+      
       ArrInit ← {∾⟨"new ", retty, "{", ','Join Arg¨ 𝕩, "}"⟩}
-      Add ∾⟨codeIndent, {void? ""; local∧new? ∾⟨retty,' ',name," = "⟩; name∾" = "},
-        {
-          3≡≠ps? Arg 2⊑ps;
-          "array": ArrInit 4↓ps;
-          "val": {
-            𝕩 SW "!tup{"? ArrInit Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
-            '?'≡⊑𝕩? ∾⟨"new ", Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
-            Arg 𝕩
-          } 4⊑ps;
-          "emit": {
-            𝕩 SW "castmethod "? ∾⟨'(', Type 5⊑ps, ") ", Arg 6⊑ps, '.', 11↓𝕩, Args 7↓ps⟩;
-            𝕩 SW "method "? ∾⟨Arg 5⊑ps, '.', 7↓𝕩, Args 6↓ps⟩;
-            𝕩 SW "op "? ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩;
-            "^arr":
-              name ← "arr_"∾•Repr globalCtr+↩1
-              AddGlobal ∾⟨"private final ", ("'static'"≡5⊑ps)/"static ", retty, " ", name, " = ",  ("'init'"≡6⊑ps)◶⟨{𝕊: ∾⟨"new ",Type 1↓3⊑ps,'[',⋈⁼𝕩,']'⟩}, ArrInit⟩ 7↓ps, ';'⟩
-              name;
-            "^newarray": ∾⟨"new ", Type 1↓3⊑ps, '[', 5⊑ps, ']'⟩;
-            "^load": ∾⟨5⊑ps, '[', 6⊑ps, ']'⟩;
-            "^store": ∾⟨5⊑ps, '[', 6⊑ps, "] = ", Arg 7⊑ps⟩;
-            # "^promote": ∾⟨'(', Type 5⊑ps, ") ", 6⊑ps⟩;
-            "^cast": ∾⟨'(', retty, ") ", Arg 5⊑ps⟩;
-            ∾⟨𝕩, Args 5↓ps⟩
-          } ¯1↓1↓4⊑ps;
-          !𝕩
-        } 2⊑ps
-        ';'
-      ⟩
+      body ← {
+        3≡≠ps? Arg 2⊑ps;
+        "array": ArrInit 4↓ps;
+        "val": {
+          𝕩 SW "!tup{"? ArrInit Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
+          '?'≡⊑𝕩? ∾⟨"new ", Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
+          Arg 𝕩
+        } 4⊑ps;
+        "emit": {
+          𝕩 SW "castmethod "? ∾⟨'(', Type 5⊑ps, ") ", Arg 6⊑ps, '.', 11↓𝕩, Args 7↓ps⟩;
+          𝕩 SW "method "? ∾⟨Arg 5⊑ps, '.', 7↓𝕩, Args 6↓ps⟩;
+          𝕩 SW "op "? ∾⟨Arg 5⊑ps, ' ', 3↓𝕩, ' ', Arg 6⊑ps⟩;
+          "^arr":
+            name ← "arr_"∾•Repr globalCtr+↩1
+            AddGlobal ∾⟨"private final ", ("'static'"≡5⊑ps)/"static ", retty, " ", name, " = ",  ("'init'"≡6⊑ps)◶⟨{𝕊: ∾⟨"new ",Type 1↓3⊑ps,'[',⋈⁼𝕩,']'⟩}, ArrInit⟩ 7↓ps, ';'⟩
+            name;
+          "^newarray": ∾⟨"new ", Type 1↓3⊑ps, '[', 5⊑ps, ']'⟩;
+          "^load": ∾⟨5⊑ps, '[', 6⊑ps, ']'⟩;
+          "^store": ∾⟨5⊑ps, '[', 6⊑ps, "] = ", Arg 7⊑ps⟩;
+          # "^promote": ∾⟨'(', Type 5⊑ps, ") ", 6⊑ps⟩;
+          "^cast": ∾⟨'(', retty, ") ", Arg 5⊑ps⟩;
+          ∾⟨𝕩, Args 5↓ps⟩
+        } ¯1↓1↓4⊑ps;
+        !𝕩
+      } 2⊑ps
+      
+      asgn ← {void? ""; local∧new? ∾⟨retty,' ',name," = "⟩; name∾" = "}
+      
+      {
+        atbegin? AddBegin ∾⟨"  ", asgn, body, ';'⟩;
+        Add ∾⟨codeIndent, asgn, body, ';'⟩
+      }
       ;
     "ret": Add {"void": codeIndent∾"return;"; ∾⟨codeIndent, "return ", Arg 𝕩, ';'⟩} 1⊑ps;
     
@@ -139,7 +147,7 @@ EmitFn ← { 𝕊:
   
   Add⍟(¬prevGoes) codeIndent ∾ "return;"
   
-  fnDefs‿fnRes
+  ⟨fnDefs, beginLns, mainLns⟩
 }
 
 
@@ -162,14 +170,15 @@ firstFn ← 1
       fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", {𝕩↓˜1+⊑𝕩⊐'_'} 1⊑ps, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
       ;
     "endFn":
-      defs‿body ← EmitFn fnIR
+      defs‿begin‿main ← EmitFn fnIR
       
       AddGlobal fnLine
+      resGlobal∾↩ begin
       AddGlobal "  int switch_num = 0;"
       AddGlobal "  "∾' 'Join defs
       AddGlobal "  switch_loop: while(true) switch(switch_num) {"
       AddGlobal ∾⟨caseIndent, "case 0:"⟩
-      resGlobal∾↩ body
+      resGlobal∾↩ main
       AddGlobal¨ "  }"‿"}"
       
       fnIR↩@

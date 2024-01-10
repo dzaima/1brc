@@ -127,7 +127,7 @@ def l128shufb_mask{T} = vcount{T}-1
 
 def shuf{L, v:V, ...is & width{L}==width{V}} = {
   def S = shuf_type{L}
-  V~~emit{L, 'method rearrange', L~~v, emit{S, 'method shuffleFromValues', species{L}, ...is}}
+  V~~emit{L, 'method rearrange', L~~v, emit{S, '^atbegin', 'method shuffleFromValues', species{L}, ...is}}
 }
 
 # significant speedup by replacing a [2]u64 shuf with an equivalent [4]u32 one
