@@ -174,10 +174,13 @@ fn core_1brc(
       # aligned16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
       store{temp_buf, 0, aligned16} # make it available for easy lookup in the loop
       
-      ########## HASHING & UPDATING ##########
       # lpf1{'aligned16: ', aligned16}
-      @for (i to __min{bufE{'sub',bufS}, vptr_store~~proc_bulk}) {
-        def VX = [exp_bulk]i8
+      
+      
+      ########## HASHING & UPDATING ##########
+      def left = __min{bufE{'sub',bufS}, vptr_store~~proc_bulk}
+      def VX = [exp_bulk]i8
+      @for (i to left) {
         off:= bufS{'load', i}
         x:= load{VX, inp, off-exp_bulk}
         m:= homMask{x==VX**10}
@@ -259,19 +262,20 @@ export{'core_1brc_buf_elts', core_1brc_buf_elts}
 export{'core_1brc_periter', core_1brc_periter}
 export{'core_1brc', core_1brc}
 
-(if (is_java) {
-  fn minibench(b_i64:*i64, b_i8:*i8, b_i32:*i32) : void = @withbufs(0) {
-    def V = [32]i8
-    def VI64 = re_el{i64, V}; def VU64 = ty_u{V}
-    def VI32 = re_el{i32, V}
-    def VI16 = re_el{i16, V}
-    def VI8  = re_el{i8,  V}; def VU8  = ty_u{VI8}
-    @for (i to 10000) {
-      def j = i * vcount{V}
-      def p = if(eltype{V}==i8) b_i8 else  if(eltype{V}==i32) b_i32 else b_i64
-      v:= load{V, p, j}
+(if (is_java or playground) {
+  fn minibench(ai8:*i8, ai16:*i16, ai32:*i32, ai64:*i64) : void = @withbufs(0) {
+    def VI8  = [32]i8;          def VU8  = ty_u{VI8}
+    def VI16 = re_el{i16, VI8}; def VU16 = ty_u{VI16}
+    def VI32 = re_el{i32, VI8}; def VU32 = ty_u{VI32}
+    def VI64 = re_el{i64, VI8}; def VU64 = ty_u{VI64}
+    @for (i to 1000) {
+      def V = VI16
+      def a = match(elwidth{V}) { {(8)}=>ai8; {(16)}=>ai16; {(32)}=>ai32; {(64)}=>ai64 }
       
-      store{p, j, v}
+      def j = i * vcount{V}
+      v:= load{V, a, j}
+      v = V~~v_eq{v, v-V**1}
+      store{a, j, V~~v}
     }
   }
   export{'minibench',minibench}
@@ -290,6 +294,7 @@ if (hasarch{'AVX2'}) {
       buf:*vptr_store = alloc{vptr_store, core_1brc_buf_elts()}
       require{'sys/mman.h'}
       require{'fcntl.h'}
+      
       
       fd:i32 = emit{i32, 'open', '"/mnt/linux2/git/1brc/measurements.txt"', 0}
       sz:ux = 1024*1024*100

@@ -318,15 +318,21 @@ public class Main {
   public static void main(String[] args) throws Exception {
     String num_str = System.getenv("THREADS_1BRC");
     if (num_str!=null && num_str.length()>0) num_threads = Integer.parseInt(num_str);
-    if (args.length == 0) args = new String[]{"./measurements.txt"};
-    if (args.length==2 && args[1].equals("bench")) {
+    
+    if (args.length==0) args = new String[]{"./measurements.txt"};
+    
+    if (args.length==2 && args[0].equals("minibench")) {
       Gen g = new Gen();
+      byte[]  b_i8  = new byte[40000];
+      short[] b_i16 = new short[40000];
+      int[]   b_i32 = new int[40000];
+      long[]  b_i64 = new long[40000];
       for (int i = 0; i < 20; i++) {
         long sns = System.nanoTime();
-        int rep = 2000;
-        for (int j = 0; j < rep; j++) g.minibench(null, mapg_exp, mapg_hash);
+        int rep = 10000;
+        for (int j = 0; j < rep; j++) g.minibench(b_i8, b_i16, b_i32, b_i64);
         long ens = System.nanoTime();
-        System.out.println((ens-sns)*1d/rep / 10000 + "ns/iter");
+        System.out.println((ens-sns)*1d/rep / 1000 + "ns/iter");
       }
       System.exit(0);
     }

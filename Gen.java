@@ -514,21 +514,26 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
     return;
   }
 }
-public void minibench(long[] v0_b_i64, byte[] v1_b_i8, int[] v2_b_i32) {
+public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_ai64) {
   int switch_num = 0;
   
   switch_loop: while(true) switch(switch_num) {
   case 0:
-    long[] v3 = new long[16];
-    int v4_i = (int)0L;
+    long[] v4 = new long[16];
+    int v5_i = (int)0L;
     l1: {
       l0: while(true) {
-        boolean v5 = v4_i < (int)10000L;
-        if (!v5) break l1;
-        int v6 = v4_i * (int)32L;
-        ByteVector v7_v = (ByteVector) ByteVector.SPECIES_256.fromArray(v1_b_i8, v6);
-        v7_v.intoArray(v1_b_i8, v6);
-        v4_i = v4_i + (int)1L;
+        boolean v6 = v5_i < (int)1000L;
+        if (!v6) break l1;
+        int v7 = v5_i * (int)16L;
+        ShortVector v8_v = (ShortVector) ShortVector.SPECIES_256.fromArray(v1_ai16, v7);
+        ShortVector v9 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)1L);
+        ShortVector v10 = v8_v.sub(v9);
+        VectorMask<?> v11 = v8_v.compare(VectorOperators.EQ, v10);
+        ShortVector v12 = (ShortVector) v11.toVector();
+        v8_v = (v12);
+        v8_v.intoArray(v1_ai16, v7);
+        v5_i = v5_i + (int)1L;
         if (1==1) continue l0;
         break;
       }
