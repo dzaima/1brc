@@ -119,7 +119,7 @@ def shuf_type{V} = [1]V
 def l128shufb_ident{T} = range{vcount{T}}
 def l128shufb{v:V, i:I} = {
   def B = re_el{i8, V}
-  emit{B, 'method selectFrom', B~~i, B~~v}
+  V~~emit{B, 'method selectFrom', B~~i, B~~v}
 }
 def l128shufb_mask{T} = vcount{T}-1
 

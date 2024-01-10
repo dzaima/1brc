@@ -274,7 +274,11 @@ export{'core_1brc', core_1brc}
       
       def j = i * vcount{V}
       v:= load{V, a, j}
-      v = V~~v_eq{v, v-V**1}
+      
+      def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
+      v = l128shufb{v, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
+      # v = shuf{VI8, v, ...low8_64}
+      
       store{a, j, V~~v}
     }
   }

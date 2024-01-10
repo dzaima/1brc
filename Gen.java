@@ -514,6 +514,7 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
     return;
   }
 }
+private final static byte[] constarr_7 = new byte[]{0,0,0,0,0,0,0,0,8,8,8,8,8,8,8,8,16,16,16,16,16,16,16,16,24,24,24,24,24,24,24,24};
 public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_ai64) {
   int switch_num = 0;
   
@@ -527,11 +528,11 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
         if (!v6) break l1;
         int v7 = v5_i * (int)16L;
         ShortVector v8_v = (ShortVector) ShortVector.SPECIES_256.fromArray(v1_ai16, v7);
-        ShortVector v9 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)1L);
-        ShortVector v10 = v8_v.sub(v9);
-        VectorMask<?> v11 = v8_v.compare(VectorOperators.EQ, v10);
-        ShortVector v12 = (ShortVector) v11.toVector();
-        v8_v = (v12);
+        byte[] v9 = constarr_7;
+        ByteVector v10 = (ByteVector) ByteVector.SPECIES_256.fromArray(v9, 0);
+        ByteVector v11 = v8_v.reinterpretAsBytes();
+        ByteVector v12 = v10.selectFrom(v11);
+        v8_v = v12.reinterpretAsShorts();
         v8_v.intoArray(v1_ai16, v7);
         v5_i = v5_i + (int)1L;
         if (1==1) continue l0;
