@@ -25,6 +25,9 @@ def __min{a:T, b:T & isprim{T}} = tern{a>b, b, a}
 def __max{a:T, b:T & isprim{T}} = tern{a>b, a, b}
 def __add{a:T, (0) & intty{T}} = a # prettier output
 def __add{(0), a:T & intty{T}} = a
+local def to_u32{x} = promote{u32,ty_u{x}}
+def clz{n, x:T & isint{T} & width{T}>=32} = clz{0, x} - (width{T}-n)
+def clz{n, x:T & isint{T} & width{T}<32} = clz{n, to_u32{x}}
 
 
 
@@ -74,14 +77,15 @@ if (hasarch{'AVX2'}) {
   include 'arch/iintrinsic/basic'
   include 'clib/malloc'
   
-  local def to_u32{x} = promote{u32,ty_u{x}}
   def popc{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_popcountll', x}
   def popc{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_popcount', to_u32{x}}
+  
   def ctz{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_ctzll', x}
   def ctz{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_ctz', x}
-  def clz{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_clzll', x}
-  def clz{x:T & isint{T} & width{T}==32} = emit{ux, '__builtin_clz', x}
-  def clz{x:T & isint{T} & width{T}<32} = clz{to_u32{x}} - (32-width{T})
+  
+  def clz{n==0, x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_clzll', x}
+  def clz{n==0, x:T & isint{T} & width{T}==32} = emit{ux, '__builtin_clz', x}
+  
   def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
   def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}
   

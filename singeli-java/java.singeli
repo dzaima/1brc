@@ -25,8 +25,7 @@ def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{
 def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
 def popc{x:T & jint{T}} = emit{i32, 'Integer.bitCount', x}
 def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
-def clz{x:T & jint{T}}                 = emit{i32, 'Integer.numberOfLeadingZeros', x}
-def clz{x:T & isint{T} & width{T}<32}  = clz{promote{u32,ty_u{x}}} - (32-width{T})
+def clz{n==0, x:T & jint{T}} = emit{i32, 'Integer.numberOfLeadingZeros', x}
 
 
 # vector things

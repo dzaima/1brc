@@ -204,7 +204,7 @@ fn core_1brc(
           # TODO maybe can do some funky shift+shuffle expand to stay in VVX after initial load?
           mc:= homMask{v == VX**10}
           c:ux = exp_bulk
-          if (likely{mc!=0}) c = clz{mc}
+          if (likely{mc!=0}) c = clz{exp_bulk, mc}
           v & load{VX, tail_mask, c}
         }
         
