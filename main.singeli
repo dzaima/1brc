@@ -371,15 +371,3 @@ export{'core_1brc', core_1brc}
   }
   export{'minibench',minibench}
 })
-
-if (hasarch{'AVX2'}) {
-  include 'clib/malloc'
-  (if (playground) {
-    require{'time.h'}
-    fn nstime() = {
-      buf:*u64 = 2**0
-      emit{void, 'clock_gettime', 0, *void~~buf}
-      load{buf,0}*1e9 + load{buf,1}
-    }
-  })
-}
