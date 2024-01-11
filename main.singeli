@@ -295,16 +295,6 @@ fn core_1brc(
           hash:= extract{hv, j*4}
           
           idx:= cast_i{ux, hash&hash_mask}
-          # TODO: could do in bulk
-          #   if (rare{(m & (m-1) == 0}) ...
-          #   else ctz & clz or something; or use the blsr just gotten above!
-          
-          # TODO: maybe: forbid fast-path 32-char names
-          #   pros:
-          #     don't need to special-case clz{0} for newline finding
-          #     don't need to special-case ctz{0} for exp index, let it load a garbage value and fail
-          #   cons:
-          #     slower for 32-char names
           m:= homMask{HASHV**hash == load{HASHV, map_hash, idx}}
           if (rare{m==0}) { # no matching hash value
             to_fail{ij}
@@ -354,26 +344,6 @@ export{'core_1brc', core_1brc}
       
       def j = i * vcount{V}
       v:= load{V, arr, j}
-      
-      # tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
-      # def VX = V
-      # def V64 = re_el{u64, VX}
-      # a:= V64~~v_eq{v, VX**10}
-      # l:= if (is_java) {
-      #   if (V64==[2]u64) make{V64, tup{promote{u64, homMask{v == VX**10}&255 != 0}, 0}}
-      #   else l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
-      # } else emit{V64, if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128', a, 8}
-      # a = a | v_ne{l, V64**0}
-      # a = a | a >> 8
-      # a = a | a >> 16
-      # a = a | a >> 32
-      # v = v &~VX~~a
-      # @for_const(10) v = shuf{[2]u64, v, 1,1}
-      
-      # mc:= homMask{v == VX**10}
-      # c:ux = exp_bulk
-      # if (likely{mc!=0}) c = clz{exp_bulk, mc}
-      # v = v & load{VX, tail_mask, c}
       
       store{arr, j, V~~v}
     }
