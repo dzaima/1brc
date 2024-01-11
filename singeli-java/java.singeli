@@ -16,8 +16,8 @@ def java_cast{T, x} = {
 def java_cast{T, x:T} = x
 def cast_i{T, x} = java_cast{T, x}
 
-def static_arr{E, vs & kind{vs}=='tuple'} = emit{*E, '^arr', 'static', 'init', ...vs}
-def object_arr{E, vs & kind{vs}=='tuple'} = emit{*E, '^arr', 'object', 'init', ...vs}
+def static_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'static', 'init', ...vs}
+def object_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'object', 'init', ...vs}
 def static_arr{E, n & knum{n}} = emit{*E, '^arr', 'static', 'len', n}
 def object_arr{E, n & knum{n}} = emit{*E, '^arr', 'object', 'len', n}
 def function_arr{E, n & knum{n}} = emit{*E, '^atbegin', '^newarray', n}
@@ -179,13 +179,13 @@ def halves{a:T} = {
 def display{a, b} = {}
 def printstr{a} = {}
 def printf{...vs} = if (tuplen{vs}>0) {
-  def syms = each{{v} => kind{v}!='symbol', vs}
+  def syms = each{{v} => ~ksym{v}, vs}
   def space = merge{each{
     {i, s0} => s0 & select{syms,i+1},
     range{tuplen{vs}-1}, slice{syms,0,-1}
   }, 0}
   each{
-    {o} => emit{void, 'System.out.print', if (kind{o}=='symbol') merge{'"',o,'"'} else o},
+    {o} => emit{void, 'System.out.print', if (ksym{o}) merge{'"',o,'"'} else o},
     merge{...each{{n, s} => tup{n, ...s**' '}, vs, space}}
   }
 }
