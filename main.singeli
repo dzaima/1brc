@@ -22,19 +22,24 @@ def lps1{...vs} = if (one) printstr{...vs}
 # define "a +{i32} b" etc to reinterpret as the element, do the op, and cast back
 local def retype_cond{C} = isprim{C}|veca{C}
 local def retype_type{C, T} = if (veca{C}) C else re_el{C, T}
-local def extend retype2{op} = {
+local def autoexp{V,e} = if (veca{V} and (knum{e} or hastype{e,eltype{V}})) 1 else 0
+local def extend vecfn{op} = {
   def op{C & retype_cond{C}} = {
     def c{T} = retype_type{C, T}
-    def me{a:T,    b:c{T}} = T~~op{c{T}~~a, b}
-    def me{a:c{T}, b:T   } = T~~op{a, c{T}~~b}
-    def me{a:T,    b:T   } = T~~op{c{T}~~a, c{T}~~b}
+    def me{a:V, b & autoexp{c{V},b}} = V~~op{c{V}~~a, c{V}**b}
+    def me{a, b:V & autoexp{c{V},a}} = V~~op{c{V}**a, c{V}~~b}
+    def me{a:V,    b:c{V}} = V~~op{c{V}~~a, b}
+    def me{a:c{V}, b:V   } = V~~op{a, c{V}~~b}
+    def me{a:V,    b:V   } = V~~op{c{V}~~a, c{V}~~b}
   }
+  def op{a:V, b   & autoexp{V,b}} = op{a, V**b}
+  def op{a,   b:V & autoexp{V,a}} = op{V**a, b}
 }
-extend ({...f}=>each{retype2,f}){
+extend ({...f}=>each{vecfn,f}){
   __add, __sub, __mul, __div, __mod,
   __eq, __ne, __gt, __ge, __lt, __le,
-  __and, __or, __xor, __min, __max,
-  __subs, __adds, v_eq, v_ne
+  __and, __or, __xor, v_eq, v_ne,
+  __min, __max, __subs, __adds
 }
 local def extend retypeShift{op} = {
   def op{C & retype_cond{C}}{a:T, b} = T~~op{retype_type{C,T}~~a, b}
@@ -90,7 +95,7 @@ fn core_1brc(
   ########## SEMICOLON SEARCH ##########
   def ptrs = each{{i} => vptr{inp, inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
-    def ms0 = each{{ptr} => homMask{ptr{'load', V, 0} == V**59}, ptrs}
+    def ms0 = each{{ptr} => homMask{ptr{'load', V, 0} == 59}, ptrs}
     
     def ms = each{{x} => {m:=x}, ms0}
     def adv_mask{buf, ptr, m, j, m0tmp} = {
@@ -137,7 +142,7 @@ fn core_1brc(
     hv^= l128_upper_u64{hv}
     hv^= hv >>{u64} 32
     hv^= hv >>{i32} 16
-    # hv&= V~~re_el{i32,V}**255 # for testing hash collision behavior
+    # hv = hv &{u32} 255 # for testing hash collision behavior
   }
   
   ########## PROCESSING ##########
@@ -159,28 +164,28 @@ fn core_1brc(
       #                   '.'=7    '.'=0
       
       idxs:= bufS{'load', VIX, 0}
-      nums:= VI8~~gather{i64, inp, 0, idxs+VIX**1, 1} # each 8-byte group is a number
+      nums:= VI8~~gather{i64, inp, 0, idxs+1, 1} # each 8-byte group is a number
       
       # lps1{nums, 8}
       # display{'nums', nums}
-      off:= VI8~~(v_eq{nums, VI8**46} >>{VI32} 23) &{VI64} VI64**3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
+      off:= VI8~~(v_eq{nums, 46} >>{VI32} 23) &{VI64} 3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
       # display{'off0', off}
       def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
       off = l128shufb{off, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
       # display{'off1', off}
       
-      nums = nums &{VI64} VI64**7r0xff # make last byte 0
+      nums = nums &{VI64} 7r0xff # make last byte 0
       off|= make{VI8, cycle{vcount{VI8}, tup{0,7, 0,7, 0,7, 7,7}}}
       off+= make{VI8, cycle{vcount{VI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
-      if (is_java) off&= VI8**l128shufb_mask{VI8}
+      if (is_java) off&= l128shufb_mask{VI8}
       # display{'off2', off}
       aligned16:= VI16~~l128shufb{nums, off}
       
       # convert to digits, mapping '\n' and '.' to 0
       if (is_java) {
-        aligned16 = __max{VI8}{aligned16 -{VI8} VI8**48, VI8**0} # no saturating ops
+        aligned16 = __max{VI8}{aligned16 -{VI8} 48, 0} # no saturating ops
       } else {
-        aligned16 = __subs{VU8}{aligned16, VU8**48}
+        aligned16 = __subs{VU8}{aligned16, 48}
       }
       
       aligned16*= make{VI16, cycle{vcount{VI16}, tup{100,10,1,0}}} # multiply by the place
@@ -190,7 +195,7 @@ fn core_1brc(
       aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>16)
       
       # negate negative numbers
-      neg:= v_ne{VI16~~v_eq{nums, VI8**45}, VI16**0}
+      neg:= v_ne{VI16~~v_eq{nums, 45}, 0}
       aligned16^= ty_s{neg}
       aligned16-= ty_s{neg}
       # aligned16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
@@ -218,17 +223,17 @@ fn core_1brc(
         def ib = i*hashn
         def mask_newline{v:T} = if (width{T}==256) {
           def V64 = re_el{u64, T}
-          a:= V64~~v_eq{v, T**10}
+          a:= V64~~v_eq{v, 10}
           l:= if (is_java) l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
           else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
-          a = a | v_ne{l, V64**0}
+          a = a | v_ne{l, 0}
           # a = a | a >> 8
           # a = a | a >> 16
           # a = a | a >> 32
           a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
-          v & T~~v_eq{T~~a, T**0}
+          v & T~~v_eq{T~~a, 0}
         } else {
-          mc:= homMask{v == VX**10}
+          mc:= homMask{v == 10}
           c:ux = exp_bulk
           if (likely{mc!=0}) c = clz{exp_bulk, mc}
           v & load{VX, tail_mask, c}
@@ -268,7 +273,7 @@ fn core_1brc(
         
         if (hashn==2 and not is_java) {
           hx:= shuf{VHX, hv, 0,0,0,0, 4,4,4,4}
-          idxv:= hv & VHX**hash_mask
+          idxv:= hv & hash_mask
           idxs:= each{{i} => promote{ux, extract{idxv,i}}, range{hashn} * 4}
           hashes:= pair{each{{idx} => load{HASHV, map_hash, idx}, idxs}}
           m:= homMask{hashes == hx}
@@ -296,7 +301,7 @@ fn core_1brc(
           hash:= extract{hv, j*4}
           
           idx:= cast_i{ux, hash&hash_mask}
-          m:= homMask{HASHV**hash == load{HASHV, map_hash, idx}}
+          m:= homMask{hash == load{HASHV, map_hash, idx}}
           if (rare{m==0}) { # no matching hash value
             to_fail{ij}
           } else {
@@ -329,12 +334,12 @@ fn core_1brc(
     }
     
     def v0 = load{VX, inp, end-exp_bulk}
-    m:= homMask{v0 == VX**10}
+    m:= homMask{v0 == 10}
     if (likely{m==0}) {
       start:= end
       do {
         start-= exp_bulk
-        m = homMask{load{VX, inp, start-exp_bulk} == VX**10}
+        m = homMask{load{VX, inp, start-exp_bulk} == 10}
       } while (m==0)
       case{'long', start-clz{exp_bulk, m}}
     } else {
