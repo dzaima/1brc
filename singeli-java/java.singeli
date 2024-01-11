@@ -169,6 +169,12 @@ def pair{a:T, b:T} = {
   store{buf, vcount{T}, b}
   load{D, buf, 0}
 }
+def halves{a:T} = {
+  def H = [vcount{T}/2]eltype{T}
+  def buf = getenv{'make_buf'}{eltype{T}, vcount{T}}
+  store{buf, 0, a}
+  tup{load{H,buf,0}, load{H,buf,vcount{H}}}
+}
 
 def display{a, b} = {}
 def printstr{a} = {}

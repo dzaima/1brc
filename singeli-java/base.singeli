@@ -115,10 +115,11 @@ if (hasarch{'AVX2'}) {
   def load{V, p:P, off & veca{V}} = load{*V~~(p+off), 0}
   def store{p:P, off, x:V & isprim{eltype{P}} & veca{V}} = store{*V~~(p+off), 0, x}
   def broadcast{V, e & veca{V}} = vec_broadcast{V, e}
-  def homMask{x:T & veci{T} & width{T}==256 & elwidth{T}==8} = emit{u32, '_mm256_movemask_epi8', x}
-  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==8} = emit{u16, '_mm_movemask_epi8', x}
-  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==32} = emit{u8, '_mm_movemask_ps', re_el{f32,x}}
-  def homMask{x:T & veci{T} & width{T}==128 & elwidth{T}==64} = emit{u8, '_mm_movemask_pd', re_el{f64,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[32]u8} = emit{u32, '_mm256_movemask_epi8', x}
+  def homMask{x:T & veci{T} & ty_u{T}==[16]u8} = emit{u16, '_mm_movemask_epi8', x}
+  def homMask{x:T & veci{T} & ty_u{T}==[8]u32} = emit{u8, '_mm256_movemask_ps', re_el{f32,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[4]u32} = emit{u8, '_mm_movemask_ps', re_el{f32,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[2]u64} = emit{u8, '_mm_movemask_pd', re_el{f64,x}}
   
   def blend{f:T, t:T, m:M & width{T}==256} = emit{T, '_mm256_blendv_epi8', f, t, m}
   def blend{f:T, t:T, m:M & width{T}==128} = emit{T, '_mm_blendv_epi8', f, t, m}
@@ -185,6 +186,7 @@ if (hasarch{'AVX2'}) {
 }
 def widen{E, x:V & E == eltype{V}} = x
 def pair{x:T} = x
+def pair{{...vs}} = pair{...vs}
 
 
 def vptr_store = ux

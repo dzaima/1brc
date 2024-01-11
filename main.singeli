@@ -202,15 +202,15 @@ fn core_1brc(
       def VVX = [hashn * exp_bulk]i8
       
       def get_temp{ij} = load{temp_buf, ij*4}
-      def to_fail{ij, toolong} = {
+      def to_fail{ij} = {
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         failposC{'store', 0, bufS{'load', ij}}
-        failposC{'store', 1, promote{vptr_store, get_temp{ij}<<1} | toolong}
+        failposC{'store', 1, promote{vptr_store, get_temp{ij}}}
         failposC{'bump', 2}
       }
       
       @for (i to proc_bulk/hashn) {
-        
+        def ib = i*hashn
         def mask_newline{v:T} = if (width{T}==256) {
           def V64 = re_el{u64, T}
           a:= V64~~v_eq{v, T**10}
@@ -221,8 +221,7 @@ fn core_1brc(
           # a = a | a >> 16
           # a = a | a >> 32
           a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
-          a = a =={i8} V64**0
-          v & T~~a
+          v & T~~v_eq{T~~a, T**0}
         } else {
           mc:= homMask{v == VX**10}
           c:ux = exp_bulk
@@ -233,17 +232,14 @@ fn core_1brc(
         # load names
         def {parts, total} = {
           def for_vs{G} = @for_const(j to hashn) {
-            off:= bufS{'load', i*hashn + j}
+            off:= bufS{'load', ib + j}
             G{load{VX, inp, off-exp_bulk}}
           }
-          if (is_java) {
+          if (is_java or hashn==1) {
             def parts = for_vs{mask_newline}
-            tup{parts, pair{...parts}}
+            tup{parts, pair{parts}}
           } else {
-            def offs = @for_const(j to hashn) bufS{'load', i*hashn + j}
-            def parts = pair{...each{{off}=>load{VX, inp, off-exp_bulk}, offs}}
-            # def parts = pair{...for_vs{{x}=>x}}
-            def total = mask_newline{parts}
+            def total = mask_newline{pair{for_vs{{x}=>x}}}
             tup{halves{total}, total}
           }
         }
@@ -255,10 +251,47 @@ fn core_1brc(
         hv^= VHX~~(re_el{u64,hv} >> 32)
         hv^= VHX~~(re_el{i32,hv} >> 16)
         # hv&= VHX~~re_el{i32,VVX}**255 # for testing hash collision behavior
-        # hx:= shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}
-        @for_const (j to hashn) {
-          def ij = i*hashn + j
-          if (ij >= left) goto{buf_end}
+        
+        def update{ij, idx} = {
+          dataoff:= idx*4
+          temp:= promote{i64, get_temp{ij}}
+          def upd{k, G} = {
+            def p = tup{map_data, dataoff+k}
+            store{...p, G{load{...p}}}
+          }
+          upd{dt_min, {v} => __min{v, temp}}
+          upd{dt_max, {v} => __max{v, temp}}
+          upd{dt_sum, {v} => v + temp}
+          upd{dt_num, {v} => v + 1}
+        }
+        
+        if (hashn==2 and not is_java) {
+          hx:= shuf{VHX, hv, 0,0,0,0, 4,4,4,4}
+          idxv:= hv & VHX**hash_mask
+          idxs:= each{{i} => promote{ux, extract{idxv,i}}, range{hashn} * 4}
+          hashes:= pair{each{{idx} => load{HASHV, map_hash, idx}, idxs}}
+          m:= homMask{hashes == hx}
+          m2:= m & (m-1)
+          if (rare{m2 == 0}) {
+            def {i0,i1} = idxs
+            def c = ctz{m}
+            idxs = tup{i0+c, i1+c-vcount{HASHV}}
+          } else {
+            idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
+          }
+          each{{j, idx} => {
+            def ij = ib + j
+            if (rare{ij >= left}) goto{buf_end}
+            exp:= load{VX, map_exp, idx*exp_bulk}
+            if (exp !== select{parts,j}) {
+              to_fail{ij}
+            } else {
+              update{ij, idx}
+            }
+          }, range{hashn}, idxs}
+        } else @for_const (j to hashn) {
+          def ij = ib + j
+          if (rare{ij >= left}) goto{buf_end}
           hash:= extract{hv, j*4}
           
           idx:= cast_i{ux, hash&hash_mask}
@@ -274,23 +307,14 @@ fn core_1brc(
           #     slower for 32-char names
           m:= homMask{HASHV**hash == load{HASHV, map_hash, idx}}
           if (rare{m==0}) { # no matching hash value
-            to_fail{ij, 0}
+            to_fail{ij}
           } else {
             idx+= ctz{m}
             exp:= load{VX, map_exp, idx*exp_bulk}
             if (exp !== select{parts,j}) {
-              to_fail{ij, 0}
+              to_fail{ij}
             } else {
-              dataoff:= idx*4
-              temp:= promote{i64, get_temp{ij}}
-              def upd{k, G} = {
-                def p = tup{map_data, dataoff+k}
-                store{...p, G{load{...p}}}
-              }
-              upd{dt_min, {v} => __min{v, temp}}
-              upd{dt_max, {v} => __max{v, temp}}
-              upd{dt_sum, {v} => v + temp}
-              upd{dt_num, {v} => v + 1}
+              update{ij, idx}
             }
           }
         }
@@ -306,14 +330,9 @@ fn core_1brc(
   # handle fails
   if (not playground) while (failposS{'lt', failposC}) {
     def off = failposS{'load', 0}
-    def data = failposS{'load', 1}
+    def temp = ty_s{failposS{'load', 1}}
     failposS{'bump', 2}
-    def toolong = (data&1) != 0
-    def temp = ty_s{data}>>1
-    def cases{name, ...args} = {
-      if (toolong) emit{void, merge{name, 'long'},  ...args}
-      else         emit{void, merge{name, 'short'}, ...args}
-    }
+    def cases{name, ...args} = emit{void, merge{name, 'short'}, ...args}
     if (is_java) cases{'main.Main.failed_', ident, off, temp}
     else cases{'failed_', off, temp}
   }
