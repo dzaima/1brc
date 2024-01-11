@@ -163,21 +163,21 @@ if (hasarch{'AVX2'}) {
     emit{void, 'printf', merge{'"', ...(n/g)**merge{...g**'%c',' '}, '\n"'}, ...each{{i} => load{buf,i}, range{n}}}
   }
   def local_new{T, n} = undefined{T, n}
-  def gather{E, ptr:P, elsOff, idxs:V, scale} = {
+  def gather{E, ptr:P, ptrOff, idxs:V, scale} = {
     def n = vcount{V}
     emit{[n]E, match(width{E}, n, elwidth{V}) {
       {(32), (8), (32)} => '_mm256_i32gather_epi32'
       {(64), (4), (32)} => '_mm256_i32gather_epi64'
       {(32), (4), (64)} => '_mm256_i64gather_epi32'
       {(64), (4), (64)} => '_mm256_i64gather_epi64'
-    }, ptr + elsOff, idxs, scale}
+    }, ptr + ptrOff, idxs, scale}
   }
   
-  # def gather{(i64), arr:*i8, elsOff, idxs:V, scale==1 & V==[4]u64} = { # emulate the emulated gather on java
+  # def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 & V==[4]u64} = { # emulate the emulated gather on java
   #   def LD = [16]i8
   #   def LN = [2]i64
   #   make{[4]i64, each{{i} => {
-  #     extract{LN~~load{LD, arr, elsOff+extract{idxs,i}}, 0}
+  #     extract{LN~~load{LD, arr, ptrOff+extract{idxs,i}}, 0}
   #   }, range{4}}}
   # }
   
