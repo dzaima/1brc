@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
   
   int periter = core_1brc_periter();
   
-  int lbound = 128; // to fit in a 100-byte name
+  int lbound = 256; // to fit in a 100-byte name, plus SIMD overread
   int rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
   
   ux start = 0;

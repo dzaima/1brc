@@ -217,7 +217,7 @@ public class Main {
     int periter_bulk = 50;
     int periter = periter_one * periter_bulk;
     
-    int lbound = 128; // to fit in a 100-byte name
+    int lbound = 256; // to fit in a 100-byte name, plus SIMD overread
     int rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
     
     FileChannel channel = new RandomAccessFile(path, "r").getChannel();
