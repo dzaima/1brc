@@ -211,16 +211,18 @@ fn core_1brc(
       
       @for (i to proc_bulk/hashn) {
         
-        def mask_newline{v} = if (0) {
-          def V64 = re_el{u64, VX}
-          a:= V64~~v_eq{v, VX**10}
+        def mask_newline{v:T} = if (width{T}==256) {
+          def V64 = re_el{u64, T}
+          a:= V64~~v_eq{v, T**10}
           l:= if (is_java) l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
           else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
           a = a | v_ne{l, V64**0}
-          a = a | a >> 8
-          a = a | a >> 16
-          a = a | a >> 32
-          v&~VX~~a
+          # a = a | a >> 8
+          # a = a | a >> 16
+          # a = a | a >> 32
+          a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
+          a = a =={i8} V64**0
+          v & T~~a
         } else {
           mc:= homMask{v == VX**10}
           c:ux = exp_bulk
@@ -229,16 +231,26 @@ fn core_1brc(
         }
         
         # load names
-        def parts = @for_const(j to hashn) {
-          def ij = i*hashn + j
-          off:= bufS{'load', ij}
-          v:= load{VX, inp, off-exp_bulk}
-          mask_newline{v}
+        def {parts, total} = {
+          def for_vs{G} = @for_const(j to hashn) {
+            off:= bufS{'load', i*hashn + j}
+            G{load{VX, inp, off-exp_bulk}}
+          }
+          if (is_java) {
+            def parts = for_vs{mask_newline}
+            tup{parts, pair{...parts}}
+          } else {
+            def offs = @for_const(j to hashn) bufS{'load', i*hashn + j}
+            def parts = pair{...each{{off}=>load{VX, inp, off-exp_bulk}, offs}}
+            # def parts = pair{...for_vs{{x}=>x}}
+            def total = mask_newline{parts}
+            tup{halves{total}, total}
+          }
         }
         
         # hash
         def VHX = re_el{HASH, VVX}
-        hv:= VHX~~pair{...parts}
+        hv:= VHX~~total
         hv^= l128_upper_u64{hv}
         hv^= VHX~~(re_el{u64,hv} >> 32)
         hv^= VHX~~(re_el{i32,hv} >> 16)
@@ -373,14 +385,6 @@ if (hasarch{'AVX2'}) {
       map_exp:*i8    = alloc{i8,   hash_size*exp_bulk}
       map_hash:*HASH = alloc{HASH, hash_size*exp_bulk}
       map_data:*i64  = alloc{i64,  hash_size*4}
-      
-      # a ← V8**0-make{V8, 1,0,0,0,0,0,1,0, 0,0,1,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,1,0,0}
-      # foo(a)
-      
-      # @for_const (i to 32) {
-      #   a:= make{[32]i8, each{{c}=>c==i, range{32}}}
-      #   lprintf{foo(a) & [32]i8**1}
-      # }
       
       def prep{hash, off, name} = {
         idx:= (hash&hash_mask) + off

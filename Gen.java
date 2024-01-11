@@ -394,9 +394,9 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
                   int v267 = v188_off + v266;
                   int v268_off = v1_buf0[v267];
                   int v269 = v268_off - 16;
-                  ByteVector v270_v = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v269);
+                  ByteVector v270 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v269);
                   ByteVector v271 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
-                  VectorMask<?> v272 = v270_v.compare(VectorOperators.EQ, v271);
+                  VectorMask<?> v272 = v270.compare(VectorOperators.EQ, v271);
                   long v273 = v272.toLong();
                   short v274_mc = (short) v273;
                   int v275_c = 16;
@@ -409,7 +409,7 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
                     v275_c = v279 - 16;
                   }
                   ByteVector v280 = (ByteVector) ByteVector.SPECIES_128.fromArray(v184_tail_mask, v275_c);
-                  ByteVector v281 = v270_v.and(v280);
+                  ByteVector v281 = v270.and(v280);
                   IntVector v282_hv = v281.reinterpretAsInts();
                   LongVector v283 = v282_hv.reinterpretAsLongs();
                   long v284 = v283.lane(1);
