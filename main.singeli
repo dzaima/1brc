@@ -156,7 +156,6 @@ fn core_1brc(
     while (bufS{'lt', bufE}) { # proc_bulk records per iteration
       ########## NUMBER PARSING ##########
       idxs:= bufS{'load', VIX, 0}
-      # nums:= VI8~~gather{i64, inp, 0, idxs+1, 1} # each 8-byte group is a number
       nums:= VI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
       nums = nums &{VI64} 7r0xff # make last byte 0
       

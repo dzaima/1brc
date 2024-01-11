@@ -9,10 +9,13 @@ java-build: classes/main/Main.class
 run: java-build
 	@java --add-modules=jdk.incubator.vector --enable-preview -cp classes main.Main 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
 
-a.out: gen.c main.cpp header.h
-	@mkdir -p obj
+
+obj/gen.o: gen.c header.h
 	$(CC)  -O3 -march=native -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
+obj/main.o: main.cpp header.h
 	$(CXX) -O3 -march=native -fno-strict-aliasing -c -o obj/main.o main.cpp
+a.out: obj/gen.o obj/main.o
+	@mkdir -p obj
 	$(CXX) -o a.out obj/gen.o obj/main.o
 
 classes/main/Main.class: Gen.java Main.java
