@@ -121,8 +121,6 @@ fn core_1brc(
     @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
   }, ri, bufs}
   
-  
-  
   def VI64 = [proc_bulk]i64;   def VU64 = ty_u{VI64}
   def VI32 = re_el{i32, VI64}
   def VI16 = re_el{i16, VI64}
@@ -131,6 +129,15 @@ fn core_1brc(
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
   
   tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
+  def VX = [exp_bulk]i8
+  def hash_vec{x:V & eltype{V}==i8} = {
+    def HX = re_el{HASH, V}
+    hv:= HX~~x
+    hv^= l128_upper_u64{hv}
+    hv^= HX~~(re_el{u64,hv} >> 32)
+    hv^= HX~~(re_el{i32,hv} >> 16)
+    # hv&= V~~re_el{i32,V}**255 # for testing hash collision behavior
+  }
   
   ########## PROCESSING ##########
   @for(buf_i to interleaved) {
@@ -195,7 +202,6 @@ fn core_1brc(
       
       ########## HASHING ##########
       def left = bufE{'sub',bufS}
-      def VX = [exp_bulk]i8
       
       # hashes two rows of names at a time on native; on Java that's slower :/
       def hashn = if (is_java) 1 else 2
@@ -246,11 +252,7 @@ fn core_1brc(
         
         # hash
         def VHX = re_el{HASH, VVX}
-        hv:= VHX~~total
-        hv^= l128_upper_u64{hv}
-        hv^= VHX~~(re_el{u64,hv} >> 32)
-        hv^= VHX~~(re_el{i32,hv} >> 16)
-        # hv&= VHX~~re_el{i32,VVX}**255 # for testing hash collision behavior
+        hv:VHX = hash_vec{total}
         
         def update{ij, idx} = {
           dataoff:= idx*4
@@ -319,12 +321,27 @@ fn core_1brc(
   
   # handle fails
   if (not playground) while (failposS{'lt', failposC}) {
-    def off = failposS{'load', 0}
+    def end = failposS{'load', 0}
     def temp = ty_s{failposS{'load', 1}}
     failposS{'bump', 2}
-    def cases{name, ...args} = emit{void, merge{name, 'short'}, ...args}
-    if (is_java) cases{'main.Main.failed_', ident, off, temp}
-    else cases{'failed_', off, temp}
+    def case{which, start, ...hash} = {
+      if (is_java) emit{void, merge{'main.Main.failed_',which}, ident, start, end, temp, ...hash}
+      else         emit{void, merge{          'failed_',which},        start, end, temp, ...hash}
+    }
+    
+    def v0 = load{VX, inp, end-exp_bulk}
+    m:= homMask{v0 == VX**10}
+    if (likely{m==0}) {
+      start:= end
+      do {
+        start-= exp_bulk
+        m = homMask{load{VX, inp, start-exp_bulk} == VX**10}
+      } while (m==0)
+      case{'long', start-clz{exp_bulk, m}}
+    } else {
+      c:= clz{exp_bulk, m}
+      case{'short', end-c, extract{hash_vec{v0 & load{VX, tail_mask, c}},0}}
+    }
   }
 }
 

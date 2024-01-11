@@ -46,7 +46,7 @@ static int64_t* get_data(std::string& k) {
   return long_entries[k];
 }
 
-static void failed_long(ux nameStart, ux nameEnd, int sample) {
+static void add_long(ux nameStart, ux nameEnd, int sample) {
   std::string k{input+nameStart, nameEnd-nameStart};
   int64_t* map_data = get_data(k);
   
@@ -92,33 +92,8 @@ static bool Arrays_equals(char* a1, ux s1, ux e1, char* a2, ux s2, ux e2) {
   return memcmp(a1+s1, a2+s2, e1-s1) == 0;
 }
 
-extern "C" void failed_long(ux nameEnd, int sample) {
-  ux nameStart = nameEnd;
-  while (nameStart != 0) {
-    if (input[nameStart-1]=='\n') break;
-    nameStart--;
-  }
-  failed_long(nameStart, nameEnd, sample);
-}
-extern "C" void hash_slow(ux nameEnd, int sample) {
-  uint32_t hash = 0;
-  uint8_t sh = 24;
-  ux nameStart = nameEnd;
-  while (nameStart>=1) {
-    char c = input[nameStart-1];
-    if (c=='\n') break;
-    hash^= (c&0xff) << sh;
-    nameStart--;
-    sh-= 8;
-  }
+static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   ux len = nameEnd-nameStart;
-  if (len >= exp_bulk) {
-    failed_long(nameStart, nameEnd, sample);
-    return;
-  }
-  hash^= (uint32_t)(((int32_t)hash) >> 16);
-  // hash&= 255; // for testing hash collision behavior
-  
   ux hashm = hash & hash_mask;
   ux idx = hashm;
   while (true) {
@@ -136,7 +111,7 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
       break;
     }
     if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
-      failed_long(nameStart, nameEnd, sample);
+      add_long(nameStart, nameEnd, sample);
       return;
     }
   }
@@ -148,14 +123,39 @@ extern "C" void hash_slow(ux nameEnd, int sample) {
   map_data[didx+dt_min] = std::min(map_data[didx+dt_min], (int64_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int64_t)sample);
 }
-void failed_short(ux nameEnd, int sample) {
-  hash_slow(nameEnd, sample);
+static void add_any_slow(ux nameEnd, int sample) {
+  uint32_t hash = 0;
+  uint8_t sh = 24;
+  ux nameStart = nameEnd;
+  while (nameStart>=1) {
+    char c = input[nameStart-1];
+    if (c=='\n') break;
+    hash^= (c&0xff) << sh;
+    nameStart--;
+    sh-= 8;
+  }
+  if (nameEnd-nameStart >= exp_bulk) {
+    add_long(nameStart, nameEnd, sample);
+    return;
+  }
+  hash^= (uint32_t)(((int32_t)hash) >> 16);
+  // hash&= 255; // for testing hash collision behavior
+  add_short(nameStart, nameEnd, sample, hash);
 }
+extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, int hash) {
+  add_short(nameStart, nameEnd, sample, hash);
+  // add_any_slow(nameEnd, sample);
+}
+extern "C" void failed_long(ux nameStart, ux nameEnd, int sample) {
+  add_long(nameStart, nameEnd, sample);
+  // add_any_slow(nameEnd, sample);
+}
+
 
 
 void basic_core(ux start, ux end) {
   for (ux i = start; i < end; i++) {
-    if (input[i] == ';') hash_slow(i, read_sample(i));
+    if (input[i] == ';') add_any_slow(i, read_sample(i));
   }
 }
 

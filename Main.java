@@ -43,24 +43,24 @@ public class Main {
   
   static HashMap<String, long[]>[] long_entries;
   
-  public static void failed_long(int ident, int nameEnd, int sample) { // called by Gen.java
-    failed_long(ident, inputs[ident], nameEnd, sample);
+  public static void failed_short(int ident, int nameStart, int nameEnd, int sample, int hash) { // called by Gen.java
+    add_short(ident, inputs[ident], nameStart, nameEnd, sample, hash);
   }
-  public static void failed_short(int ident, int nameEnd, int sample) { // called by Gen.java
-    hash_slow(ident, inputs[ident], nameEnd, sample);
+  public static void failed_long(int ident, int nameStart, int nameEnd, int sample) { // called by Gen.java
+    add_long(ident, inputs[ident], nameStart, nameEnd, sample);
   }
   
   private static int def_hash(int i) { // hash to put at mapg_hash[i] such that it's never the expected one
     return i + hashv_count;
   }
   
-  public static void failed_long_full(int ident, byte[] input, int nameStart, int nameEnd, int sample) {
+  public static void add_long(int ident, byte[] input, int nameStart, int nameEnd, int sample) {
     if (DEBUG && input[nameEnd]!=';') {
       System.out.println("No semi at "+nameEnd+" ("+(nameEnd)+")");
       throw new Error();
     }
     String k = new String(input, nameStart, nameEnd-nameStart);
-    if (DEBUG) System.out.println("failed_long "+k+" "+sample);
+    if (DEBUG) System.out.println("add_long "+k+" "+sample);
     
     long[] map_data = long_entries[ident].computeIfAbsent(k, k2 -> {
       long[] t = new long[4];
@@ -74,16 +74,6 @@ public class Main {
     map_data[didx+dt_num]+= 1;
     map_data[didx+dt_min] = Math.min(map_data[didx+dt_min], sample);
     map_data[didx+dt_max] = Math.max(map_data[didx+dt_max], sample);
-  }
-  
-  public static void failed_long(int ident, byte[] input, int nameEnd, int sample) {
-    int nameStart = nameEnd;
-    while (true) {
-      int prev = nameStart-1;
-      if (prev<0 || input[prev]=='\n') break;
-      nameStart = prev;
-    }
-    failed_long_full(ident, input, nameStart, nameEnd, sample);
   }
   
   static int read_sample(byte[] arr, int semiPos) {
@@ -105,30 +95,11 @@ public class Main {
     return neg? -res : res;
   }
   
-  public static void hash_slow(int ident, byte[] input, int nameEnd, int sample) {
-    if (DEBUG && sample != read_sample(input,nameEnd)) throw new Error("exp "+read_sample(input,nameEnd)+", got "+sample);
-    
-    int hash = 0;
-    int sh = 24;
-    int nameStart = nameEnd;
-    while (nameStart>=1) {
-      byte c = input[nameStart-1];
-      if (c=='\n') break;
-      hash^= (c&0xff) << sh;
-      nameStart--;
-      sh-= 8;
-    }
+  public static void add_short(int ident, byte[] input, int nameStart, int nameEnd, int sample, int hash) {
     int len = nameEnd-nameStart;
-    if (len >= exp_bulk) {
-      failed_long_full(ident, input, nameStart, nameEnd, sample);
-      return;
-    }
-    hash^= hash>>16;
-    // hash&= 255; // for testing hash collision behavior
-    if (DEBUG) System.out.println("hash_slow "+new String(input, nameStart, len)+" "+sample);
-    
     int hashm = hash & hash_mask;
     int idx = hashm;
+    if (DEBUG) System.out.println("add_short "+new String(input, nameStart, len)+" "+sample);
     
     glock_r.unlock(); // release this threads read lock to allow the write lock to function
     // brief moment where this thread doesn't own any lock on mapg; acceptable, as this function handles any case, incl. if the entry is already present
@@ -148,7 +119,7 @@ public class Main {
         break;
       }
       if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
-        failed_long_full(ident, input, nameStart, nameEnd, sample);
+        add_long(ident, input, nameStart, nameEnd, sample);
         glock_w.unlock();
         glock_r.lock();
         return;
@@ -165,6 +136,28 @@ public class Main {
     map_data[didx+dt_max] = Math.max(map_data[didx+dt_max], sample);
   }
   
+  public static void add_any_slow(int ident, byte[] input, int nameEnd, int sample) {
+    if (DEBUG && sample != read_sample(input,nameEnd)) throw new Error("exp "+read_sample(input,nameEnd)+", got "+sample);
+    
+    int hash = 0;
+    int sh = 24;
+    int nameStart = nameEnd;
+    while (nameStart>=1) {
+      byte c = input[nameStart-1];
+      if (c=='\n') break;
+      hash^= (c&0xff) << sh;
+      nameStart--;
+      sh-= 8;
+    }
+    if (nameEnd-nameStart >= exp_bulk) {
+      add_long(ident, input, nameStart, nameEnd, sample);
+      return;
+    }
+    hash^= hash>>16;
+    // hash&= 255; // for testing hash collision behavior
+    add_short(ident, input, nameStart, nameEnd, sample, hash);
+  }
+  
   
   
   record Ent(String k, long[] stats) { }
@@ -178,7 +171,7 @@ public class Main {
     for (int i = start; i < end; i++) {
       if (arr[i] == ';') {
         if (DEBUG) System.out.println();
-        hash_slow(ident, arr, i, read_sample(arr, i));
+        add_any_slow(ident, arr, i, read_sample(arr, i));
       }
     }
     glock_r.unlock();
