@@ -38,13 +38,16 @@ std::string mapg_string[hash_size];
 
 
 std::unordered_map<std::string, int64_t*> long_entries;
+static __attribute__((noinline)) int64_t* get_data_new(std::string& k) {
+  int64_t* p = long_entries[k] = new int64_t[4]();
+  p[dt_min] = -9999;
+  p[dt_max] = -9999;
+  return p;
+}
 static int64_t* get_data(std::string& k) {
-  if (!long_entries.count(k)) {
-    int64_t* p = long_entries[k] = new int64_t[4]();
-    p[dt_min] = -9999;
-    p[dt_max] = -9999;
-  }
-  return long_entries[k];
+  auto v = long_entries.find(k);
+  if (__builtin_expect(v == long_entries.end(), 0)) return get_data_new(k);
+  return v->second;
 }
 
 static void add_long(ux nameStart, ux nameEnd, int sample) {
