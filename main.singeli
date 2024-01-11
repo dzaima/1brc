@@ -33,7 +33,8 @@ local def extend retype2{op} = {
 extend ({...f}=>each{retype2,f}){
   __add, __sub, __mul, __div, __mod,
   __eq, __ne, __gt, __ge, __lt, __le,
-  __and, __or, __xor
+  __and, __or, __xor, __min, __max,
+  __subs, __adds, v_eq, v_ne
 }
 local def extend retypeShift{op} = {
   def op{C & retype_cond{C}}{a:T, b} = T~~op{retype_type{C,T}~~a, b}
@@ -134,8 +135,8 @@ fn core_1brc(
     def HX = re_el{HASH, V}
     hv:= HX~~x
     hv^= l128_upper_u64{hv}
-    hv^= HX~~(re_el{u64,hv} >> 32)
-    hv^= HX~~(re_el{i32,hv} >> 16)
+    hv^= hv >>{u64} 32
+    hv^= hv >>{i32} 16
     # hv&= V~~re_el{i32,V}**255 # for testing hash collision behavior
   }
   
@@ -162,38 +163,36 @@ fn core_1brc(
       
       # lps1{nums, 8}
       # display{'nums', nums}
-      off:= VI8~~(VI64~~(VI32~~v_eq{nums, VI8**46} >> 23) & VI64**3) # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
+      off:= VI8~~(v_eq{nums, VI8**46} >>{VI32} 23) &{VI64} VI64**3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
       # display{'off0', off}
       def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
       off = l128shufb{off, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
       # display{'off1', off}
       
-      
-      nums = VI8~~(VI64~~nums & VI64**7r0xff) # make last byte 0
+      nums = nums &{VI64} VI64**7r0xff # make last byte 0
       off|= make{VI8, cycle{vcount{VI8}, tup{0,7, 0,7, 0,7, 7,7}}}
       off+= make{VI8, cycle{vcount{VI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
       if (is_java) off&= VI8**l128shufb_mask{VI8}
       # display{'off2', off}
       aligned16:= VI16~~l128shufb{nums, off}
-      # display{'aligned16', aligned16-VI16**48}
       
       # convert to digits, mapping '\n' and '.' to 0
       if (is_java) {
-        aligned16 = VI16~~__max{VI8~~aligned16 - VI8**48, VI8**0} # no saturating ops
+        aligned16 = __max{VI8}{aligned16 -{VI8} VI8**48, VI8**0} # no saturating ops
       } else {
-        aligned16 = VI16~~__subs{VU8~~aligned16, VU8**48}
+        aligned16 = __subs{VU8}{aligned16, VU8**48}
       }
       
-      aligned16*= make{VI16, cycle{vcount{VI16},  tup{100,10,1,0}}} # multiply by the place
+      aligned16*= make{VI16, cycle{vcount{VI16}, tup{100,10,1,0}}} # multiply by the place
       
       # sum the parts
       aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>32)
       aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>16)
       
       # negate negative numbers
-      neg:= VI16~~v_ne{VI16~~v_eq{nums, VI8**45}, VI16**0}
-      aligned16^= neg
-      aligned16-= neg
+      neg:= v_ne{VI16~~v_eq{nums, VI8**45}, VI16**0}
+      aligned16^= ty_s{neg}
+      aligned16-= ty_s{neg}
       # aligned16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
       store{temp_buf, 0, aligned16} # make it available for easy lookup in the loop
       
