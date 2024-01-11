@@ -377,52 +377,5 @@ if (hasarch{'AVX2'}) {
       emit{void, 'clock_gettime', 0, *void~~buf}
       load{buf,0}*1e9 + load{buf,1}
     }
-    
-    main() : void = {
-      buf:*vptr_store = alloc{vptr_store, core_1brc_buf_elts()}
-      require{'sys/mman.h'}
-      require{'fcntl.h'}
-      
-      fd:i32 = emit{i32, 'open', '"/mnt/linux2/git/1brc/measurements.txt"', 0}
-      sz:ux = 1024*1024*100
-      data:*i8 = emit{*i8, 'mmap', 0, sz, 1, 1, fd, 0}
-      hash_mask:HASH = 0xffff
-      hash_size:= hash_mask + vcount{HASHV}
-      map_exp:*i8    = alloc{i8,   hash_size*exp_bulk}
-      map_hash:*HASH = alloc{HASH, hash_size*exp_bulk}
-      map_data:*i64  = alloc{i64,  hash_size*4}
-      
-      def prep{hash, off, name} = {
-        idx:= (hash&hash_mask) + off
-        store{map_hash, idx, hash}
-        store{map_exp, idx*exp_bulk, make{[exp_bulk]i8, name}}
-      }
-      prep{220018025, 0, tup{0, 0, 0, 0, 0, 0, 0, 0, 0, 84, 111, 108, 105, 97, 114, 97}}
-      prep{252515373, 2, tup{0, 0, 0, 0, 0, 0, 0, 0, 65, 117, 99, 107, 108, 97, 110, 100}}
-      prep{521406271, 3, tup{0, 0, 0, 0, 33, 0, 0, 0, 75, 104, 97, 114, 116, 111, 117, 109}}
-      
-      def tone{o, m} = if (one) o else m
-      @for (tone{1, 20}) {
-        sns:= nstime()
-        off:ux = 64
-        def rep = tone{1, 8000}
-        @for (i to rep) {
-          core_1brc(
-            0, buf,
-            
-            hash_mask,
-            map_exp, map_hash, map_data,
-            
-            data, off
-          )
-          off+= periter
-        }
-        ens:= nstime()
-        lprintf{'processed ', rep * periter, ' bytes'}
-        lprintf{'took ', cast_i{f64, ens-sns}/1e9, 's'}
-        lprintf{'ns/byte: ', cast_i{f64, ens-sns} / (rep * periter)}
-        lprintf{'ns/line: ', cast_i{f64, ens-sns} / (rep * periter) * 13.8}
-      }
-    }
   })
 }
