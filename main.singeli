@@ -70,7 +70,7 @@ def dt_sum = 0
 def dt_num = 1
 def dt_min = 2
 def dt_max = 3
-
+def DATA = if (is_java) i64 else i32
 fn core_1brc(
   ident:i32,
   buf0:*vptr_store,
@@ -80,7 +80,7 @@ fn core_1brc(
   # indexed by masked hash
   map_exp:*i8,    # chunks of exp_bulk
   map_hash:*HASH, # full hash
-  map_data:*i64,  # chunks of 4: min, max, sum, count
+  map_data:*DATA,  # chunks of 4: min, max, sum, count
   
   inp:*i8,
   inpOff:ux
@@ -264,7 +264,7 @@ fn core_1brc(
         
         def update{ij, idx} = {
           dataoff:= idx*4
-          temp:= promote{i64, get_temp{ij}}
+          temp:= promote{DATA, get_temp{ij}}
           def upd{k, G} = {
             def p = tup{map_data, dataoff+k}
             store{...p, G{load{...p}}}

@@ -29,7 +29,8 @@ constexpr int hash_size = hash_mask + hashv_count;
 char exp_zeroes[exp_bulk];
 
 char* input;
-int64_t     mapg_data  [hash_size*4];
+int64_t     mapg_sum   [hash_size]; // full-width sum
+int32_t     mapg_data  [hash_size*4];
 int8_t      mapg_exp   [hash_size*exp_bulk];
 uint32_t    mapg_hash  [hash_size*exp_bulk];
 std::string mapg_string[hash_size];
@@ -117,11 +118,11 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   }
   
   ux didx = idx*4;
-  int64_t* map_data = mapg_data;
+  int32_t* map_data = mapg_data;
   map_data[didx+dt_sum]+= sample;
   map_data[didx+dt_num]+= 1;
-  map_data[didx+dt_min] = std::min(map_data[didx+dt_min], (int64_t)sample);
-  map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int64_t)sample);
+  map_data[didx+dt_min] = std::min(map_data[didx+dt_min], (int32_t)sample);
+  map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int32_t)sample);
 }
 static void add_any_slow(ux nameEnd, int sample) {
   uint32_t hash = 0;
@@ -172,6 +173,11 @@ static std::string fmt(double x) {
   
   return std::string(buf);
 }
+static int64_t* expand_stats(ux idx) {
+  int32_t* ptr = mapg_data + idx*4;
+  int64_t sum1 = mapg_sum[idx];
+  return new long[]{ptr[0]+sum1, ptr[1], ptr[2], ptr[3]};
+}
 void print_stats() {
   std::vector<std::pair<std::string, int64_t*>> ents;
   for (auto& ent : long_entries) {
@@ -180,7 +186,7 @@ void print_stats() {
   
   for (int i = 0; i < hash_size; i++) {
     if (mapg_hash[i] != def_hash(i)) {
-      ents.emplace_back(mapg_string[i], mapg_data + i*4);
+      ents.emplace_back(mapg_string[i], expand_stats(i));
     }
   }
   std::sort(ents.begin(), ents.end());
@@ -284,6 +290,7 @@ int main(int argc, char* argv[]) {
   ux* buf = new ux[core_1brc_buf_elts()];
   
   ux inpsize = lbound + periter + rbound;
+  ux bulkchars = 0;
   while (start+inpsize < end) {
     core_1brc(
       0, buf,
@@ -292,6 +299,14 @@ int main(int argc, char* argv[]) {
       (int8_t*)input, start
     );
     start+= periter;
+    bulkchars+= periter;
+    if (bulkchars > 12890000) { // (2⋆31)÷999 records are needed to overflow the int32_t sum. At max there's one record per 6 chars "a;0.0\n", so 6×(2⋆31)÷999
+      for (ux i = 0; i < hash_size; i++) {
+        mapg_sum[i]+= mapg_data[i*4 + dt_sum];
+        mapg_data[i*4 + dt_sum] = 0;
+      }
+      bulkchars = 0;
+    }
   }
   
   
@@ -316,7 +331,7 @@ int main(int argc, char* argv[]) {
     for (auto& ent : long_entries) add(ent.first, ent.second);
     
     for (int i = 0; i < hash_size; i++) {
-      if (mapg_hash[i] != def_hash(i)) add(mapg_string[i], mapg_data + i*4);
+      if (mapg_hash[i] != def_hash(i)) add(mapg_string[i], expand_stats(i));
     }
     
     *thread_stats++ = ';';
