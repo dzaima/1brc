@@ -119,7 +119,7 @@ public class Main {
       sh-= 8;
     }
     int len = nameEnd-nameStart;
-    if (len > exp_bulk) {
+    if (len >= exp_bulk) {
       failed_long_full(ident, input, nameStart, nameEnd, sample);
       return;
     }
