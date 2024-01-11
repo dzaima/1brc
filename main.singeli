@@ -269,7 +269,8 @@ fn core_1brc(
             def p = tup{map_data, dataoff+k}
             store{...p, G{load{...p}}}
           }
-          upd{dt_min, {v} => __min{v, temp}}
+          if (is_java) upd{dt_min, {v} => __min{v, temp}}
+          else         upd{dt_min, {v} => __max{v, -temp}}
           upd{dt_max, {v} => __max{v, temp}}
           upd{dt_sum, {v} => v + temp}
           upd{dt_num, {v} => v + 1}

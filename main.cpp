@@ -41,7 +41,7 @@ std::unordered_map<std::string, int64_t*> long_entries;
 static int64_t* get_data(std::string& k) {
   if (!long_entries.count(k)) {
     int64_t* p = long_entries[k] = new int64_t[4]();
-    p[dt_min] = 9999;
+    p[dt_min] = -9999;
     p[dt_max] = -9999;
   }
   return long_entries[k];
@@ -54,7 +54,7 @@ static void add_long(ux nameStart, ux nameEnd, int sample) {
   int didx = 0;
   map_data[didx+dt_sum]+= sample;
   map_data[didx+dt_num]+= 1;
-  map_data[didx+dt_min] = std::min(map_data[didx+dt_min], (int64_t)sample);
+  map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int64_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int64_t)sample);
 }
 static void merge_ent(std::string k, int64_t* new_data) {
@@ -62,7 +62,7 @@ static void merge_ent(std::string k, int64_t* new_data) {
   
   map_data[dt_sum]+= new_data[dt_sum];
   map_data[dt_num]+= new_data[dt_num];
-  map_data[dt_min] = std::min(map_data[dt_min], new_data[dt_min]);
+  map_data[dt_min] = std::max(map_data[dt_min], new_data[dt_min]);
   map_data[dt_max] = std::max(map_data[dt_max], new_data[dt_max]);
 }
 
@@ -121,7 +121,7 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   int32_t* map_data = mapg_data;
   map_data[didx+dt_sum]+= sample;
   map_data[didx+dt_num]+= 1;
-  map_data[didx+dt_min] = std::min(map_data[didx+dt_min], (int32_t)sample);
+  map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int32_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int32_t)sample);
 }
 static void add_any_slow(ux nameEnd, int sample) {
@@ -197,7 +197,7 @@ void print_stats() {
     if (first) first = false;
     else std::cout << ", ";
     int64_t* buf = ent.second;
-    std::cout << ent.first << '=' << fmt(buf[dt_min]) << '/' << fmt(buf[dt_sum]*1.0 / buf[dt_num]) << '/' << fmt(buf[dt_max]);
+    std::cout << ent.first << '=' << fmt(-buf[dt_min]) << '/' << fmt(buf[dt_sum]*1.0 / buf[dt_num]) << '/' << fmt(buf[dt_max]);
   }
   std::cout << '}' << std::endl;
 }
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
   
   for (ux i = 0; i < hash_size; i++) mapg_hash[i] = def_hash(i);
   for (ux i = 0; i < hash_size; i++) {
-    mapg_data[i*4 + dt_min] = 9999;
+    mapg_data[i*4 + dt_min] = -9999;
     mapg_data[i*4 + dt_max] = -9999;
   }
   
