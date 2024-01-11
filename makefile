@@ -1,4 +1,4 @@
-SHELL = /usr/bin/env bash
+SHELL = /usr/bin/env bash -o pipefail
 
 SINGELI = $(SINGELI_PATH)/singeli
 SIJAVA = ./singeli-java
