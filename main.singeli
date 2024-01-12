@@ -105,17 +105,14 @@ fn core_1brc(
   inpOff:ux
 ) : void = @withbufs(object_arr) {
   def takes = takes0{bulk}
-  def V = [bulk]i8
-  def ri = range{interleaved}
   
+  def ri = range{interleaved}
   def bufs = each{ly{'bufs'}{buf0, .}, ri}
-  def failposS = ly{'faildata'}{buf0, 0}
-  def failposC = failposS{'copy'}
   
   ########## SEMICOLON SEARCH ##########
   def ptrs = each{{i} => vptr{inp, inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
-    def ms0 = each{{ptr} => homMask{ptr{'load', V, 0} == 59}, ptrs}
+    def ms0 = each{{ptr} => homMask{ptr{'load', [bulk]i8, 0} == 59}, ptrs}
     
     def ms = each{{x} => {m:=x}, ms0}
     def adv_mask{buf, ptr, m, j, m0tmp} = {
@@ -147,16 +144,20 @@ fn core_1brc(
     @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
   }, ri, bufs}
   
+  
+  
+  ########## PROCESSING ##########
+  # temperature parsing stuff
   def VI64 = [proc_bulk]i64
   def VI16 = i16~*VI64
   def VI8  =  i8~*VI64
-  
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
-  
   tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
+  # search & update stuff
   def VX = [exp_bulk]i8
+  def failposS = ly{'faildata'}{buf0, 0}
+  def failposC = failposS{'copy'}
   
-  ########## PROCESSING ##########
   @for(buf_i to interleaved) {
     def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
     def bufE = vptr{buf0, ly{'bufsEnds'}{buf0,0}{'load', buf_i}}
@@ -217,6 +218,7 @@ fn core_1brc(
       each16-= neg
       # each16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
       store{temp_buf, 0, each16} # make it available for easy lookup in the loop
+      
       
       
       ########## HASHING ##########
