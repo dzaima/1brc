@@ -58,9 +58,7 @@ oper ~* re_el infix right 55
 
 def ly = buflayout{
   1, 128, 'pad',
-  1, interleaved, 'bufsEnds',
   interleaved, bufmax+proc_bulk, 'bufs',
-  1, bufmax*interleaved*2, 'faildata', # pairs of offset, temperature
   1, 128, 'pad',
 }
 
@@ -108,6 +106,7 @@ fn core_1brc(
   
   def ri = range{interleaved}
   def bufs = each{ly{'bufs'}{buf0, .}, ri}
+  bufEnds:*ux = object_arr{ux, interleaved}
   
   ########## SEMICOLON SEARCH ##########
   def ptrs = each{{i} => vptr{inp, inpOff + i*bulk}, ri}
@@ -140,7 +139,7 @@ fn core_1brc(
   }
   
   each{{i, buf} => {
-    ly{'bufsEnds'}{buf0,0}{'store', i, buf{'to_store',0}}
+    store{bufEnds, i, buf{'to_store',0}}
     @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
   }, ri, bufs}
   
@@ -161,7 +160,7 @@ fn core_1brc(
   
   @for(buf_i to interleaved) {
     def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
-    def bufE = vptr{buf0, ly{'bufsEnds'}{buf0,0}{'load', buf_i}}
+    def bufE = vptr{buf0, load{bufEnds, buf_i}}
     
   ########## PROCESSING ITERATION ##########
     retctr:ux = 0
