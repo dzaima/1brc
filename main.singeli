@@ -8,9 +8,12 @@ def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of
 def HASH = u32 # full hash
 def HASHV = [4]HASH # buckets to search
 
+# shift down by n bytes in the low 8 bytes of each 128-bit lane
+def l128_shrb8{a:V, n} = l128shrb{a,n} # unused as-is, but could be better on some architectures
+def l128_shrb8{a:V, n} = a >>{u64} (n*8)
+
 def proc_bulk = 4 # number of records to handle in a processing iteration
 def VIX = [proc_bulk]vptr_store
-def ri = range{interleaved}
 
 config playground = 0
 def one = playground
@@ -86,6 +89,7 @@ fn core_1brc(
 ) : void = @withbufs(object_arr) {
   def takes = takes0{bulk}
   def V = [bulk]i8
+  def ri = range{interleaved}
   
   def bufs = each{ly{'bufs'}{buf0, .}, ri}
   def failposS = ly{'faildata'}{buf0, 0}
@@ -139,7 +143,7 @@ fn core_1brc(
     def HX = re_el{HASH, V}
     hv:= HX~~x
     hv^= l128_upper_u64{hv}
-    hv^= hv >>{u64} 32
+    hv^= l128_shrb8{hv,4}
     hv^= hv >>{i32} 16
     # hv = hv &{u32} 255 # for testing hash collision behavior
   }
@@ -228,13 +232,17 @@ fn core_1brc(
           def V64 = re_el{u64, T}
           a:= V64~~v_eq{v, 10}
           l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
-          else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
+          else l128shrb{a, 8}
           a = a | v_ne{l, 0}
-          # a = a | a >> 8
-          # a = a | a >> 16
-          # a = a | a >> 32
-          a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
-          v & T~~v_eq{T~~a, 0}
+          if (0) {
+            a = a | l128_shrb8{a, 1}
+            a = a | l128_shrb8{a, 2}
+            a = a | l128_shrb8{a, 4}
+            v &~ T~~a
+          } else {
+            a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
+            v & T~~v_eq{T~~a, 0}
+          }
         } else {
           mc:= homMask{v == 10}
           c:ux = exp_bulk
