@@ -410,11 +410,11 @@ public void core_1brc(int v0_ident, int[] v1_buf0, int v2_hash_mask, byte[] v3_m
               ShortVector v264 = v263.reinterpretAsShorts();
               ShortVector v265 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)0);
               VectorMask<?> v266 = v264.compare(VectorOperators.NE, v265);
-              ShortVector v267_neg = (ShortVector) v266.toVector();
-              ShortVector v268 = (v267_neg);
-              v260_each16 = v260_each16.lanewise(VectorOperators.XOR, v268);
-              ShortVector v269 = (v267_neg);
-              v260_each16 = v260_each16.sub(v269);
+              ShortVector v267 = (ShortVector) v266.toVector();
+              ByteVector v268 = v267.reinterpretAsBytes();
+              ShortVector v269_neg = v268.reinterpretAsShorts();
+              v260_each16 = v260_each16.lanewise(VectorOperators.XOR, v269_neg);
+              v260_each16 = v260_each16.sub(v269_neg);
               v260_each16.intoArray(v183_temp_buf, 0);
               int v271 = v191_off - v188_off;
               int v272_i = 0;

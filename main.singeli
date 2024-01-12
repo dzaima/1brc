@@ -146,10 +146,9 @@ fn core_1brc(
     @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
   }, ri, bufs}
   
-  def VI64 = [proc_bulk]i64;   def VU64 = ty_u{VI64}
-  def VI32 = re_el{i32, VI64}
+  def VI64 = [proc_bulk]i64
   def VI16 = re_el{i16, VI64}
-  def VI8  = re_el{i8,  VI64}; def VU8  = ty_u{VI8}
+  def VI8  = re_el{i8,  VI64}
   
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
   
@@ -168,16 +167,16 @@ fn core_1brc(
       ########## NUMBER PARSING ##########
       idxs:= bufS{'load', VIX, 0}
       nums:= VI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
-      nums = nums &{VI64} 7r0xff # make last byte 0
+      nums = nums &{u64} 7r0xff # make last byte 0
       
-      off:= VI8~~(v_eq{nums, 46} >>{VI32} 23) &{VI64} 3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
-      def low8_64 = l128shufb_ident{VI8}-cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
+      off:= VI8~~(v_eq{nums, 46} >>{i32} 23) &{u64} 3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
+      def low8_64 = l128shufb_ident{VI8} - cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
       off = l128shufb{off, make{VI8, low8_64}} # expand the low byte of each i64 to each byte
       # display{'off1', off}
       
       def to_digits{v} = { # convert to digits, mapping '\n' and '.' to 0
-        if (is_java) __max{VI8}{v -{VI8} 48, 0} # no saturating ops
-        else __subs{VU8}{v, 48}
+        if (is_java) __max{i8}{v -{i8} 48, 0} # no saturating ops
+        else __subs{u8}{v, 48}
       }
       
       # nums     off1       off2A    aligned    off2B    aligned16
@@ -193,8 +192,8 @@ fn core_1brc(
         if (is_java) off&= l128shufb_mask{VI8}
         aligned:= l128shufb{nums, off}
         aligned = to_digits{aligned}
-        t16:= madd{VU8~~aligned, cycle_make{VI8,  10,1,1,0}}
-        t32:= madd{t16,          cycle_make{VI16, 10,1}}
+        t16:= madd{re_el{u8,aligned}, cycle_make{VI8,  10,1,1,0}}
+        t32:= madd{t16,               cycle_make{VI16, 10,1}}
         VI16~~t32
       } else {
         
@@ -207,14 +206,14 @@ fn core_1brc(
         aligned16 = to_digits{aligned16}
         
         aligned16*= cycle_make{VI16, 100,10,1,0} # multiply by the place
-        aligned16 = aligned16 + (aligned16 >>{VU64} 32) # sum the parts
-        aligned16 = aligned16 + (aligned16 >>{VU64} 16)
+        aligned16 = aligned16 + (aligned16 >>{u64} 32) # sum the parts
+        aligned16 = aligned16 + (aligned16 >>{u64} 16)
       }
       
       # negate negative numbers
-      neg:= v_ne{VI16~~v_eq{nums, 45}, 0}
-      each16^= ty_s{neg}
-      each16-= ty_s{neg}
+      neg:= VI16~~v_ne{u16}{v_eq{nums, 45}, 0}
+      each16^= neg
+      each16-= neg
       # each16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
       store{temp_buf, 0, each16} # make it available for easy lookup in the loop
       
