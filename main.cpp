@@ -209,12 +209,14 @@ int main(int argc, char* argv[]) {
   char* num_str = std::getenv("THREADS_1BRC");
   if (num_str!=nullptr) num_threads = atoi(num_str);
   
-  
   int fd = open(argc==1? "measurements.txt" : argv[1], 0);
   if (fd == -1) {
     std::cout << "couldn't open file" << std::endl;
     exit(1);
   }
+  
+  bool quiet = argc<3? false : argv[2][0]=='q';
+  
   ux flen = lseek(fd, 0, SEEK_END);
   input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
   
@@ -276,7 +278,7 @@ int main(int argc, char* argv[]) {
       }
     }
     
-    print_stats();
+    if (!quiet) print_stats();
     return 0;
     
     run_core:;
@@ -317,7 +319,7 @@ int main(int argc, char* argv[]) {
   if (left > 0) basic_core(end-left, end);
   
   if (thread_stats == NULL) {
-    print_stats();
+    if (!quiet) print_stats();
   } else {
     auto add = [&thread_stats](std::string name, int64_t* data){
       int nlen = name.size();
