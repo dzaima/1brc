@@ -189,6 +189,7 @@ public class Main {
     mem.asSlice(off, tgt.length).asByteBuffer().get(tgt, 0, tgt.length);
   }
   
+  private static boolean quiet;
   @SuppressWarnings("unchecked")
   static void sol(String path) throws Exception {
     Gen g0 = new Gen();
@@ -323,15 +324,17 @@ public class Main {
     
     
     
-    System.out.print("{");
-    boolean first = true;
-    for (Ent e : vs) {
-      if (first) first = false;
-      else System.out.print(", ");
-      long[] s = e.stats;
-      System.out.print(e.k + "=" + fmt(s[dt_min]) + "/" + fmt(s[dt_sum]*1d / s[dt_num]) + "/" + fmt(s[dt_max]));
+    if (!quiet) {
+      System.out.print("{");
+      boolean first = true;
+      for (Ent e : vs) {
+        if (first) first = false;
+        else System.out.print(", ");
+        long[] s = e.stats;
+        System.out.print(e.k + "=" + fmt(s[dt_min]) + "/" + fmt(s[dt_sum]*1d / s[dt_num]) + "/" + fmt(s[dt_max]));
+      }
+      System.out.println("}");
     }
-    System.out.println("}");
   }
   
   public static void main(String[] args) throws Exception {
@@ -356,14 +359,17 @@ public class Main {
       System.exit(0);
     }
     
-    if (args.length==2 && args[1].equals("repeat")) {
-      for (int i=0;i<10;i++) {
-        long sns = System.nanoTime();
-        sol(args[0]);
-        long ens = System.nanoTime();
-        System.out.println((ens-sns)/1e9+" seconds");
+    if (args.length==2) {
+      if (args[1].equals("q")) quiet = true;
+      if (args[1].equals("repeat")) {
+        for (int i=0;i<10;i++) {
+          long sns = System.nanoTime();
+          sol(args[0]);
+          long ens = System.nanoTime();
+          System.out.println((ens-sns)/1e9+" seconds");
+        }
+        System.exit(0);
       }
-      System.exit(0);
     }
     sol(args[0]);
     
