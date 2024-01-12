@@ -59,7 +59,7 @@ def ly = buflayout{
   1, 128, 'pad',
   1, interleaved, 'bufsEnds',
   interleaved, bufmax+proc_bulk, 'bufs',
-  1, bufmax*interleaved*2, 'faildata', # pairs of offset, temperature<<1 | long
+  1, bufmax*interleaved*2, 'faildata', # pairs of offset, temperature
   1, 128, 'pad',
 }
 
