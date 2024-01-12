@@ -19,6 +19,30 @@ public int core_1brc_periter() {
     return 10624;
   }
 }
+public int hash_1brc(byte[] v0_arr) {
+  int switch_num = 0;
+  
+  switch_loop: while(true) switch(switch_num) {
+  case 0:
+    ByteVector v1 = (ByteVector) ByteVector.SPECIES_128.fromArray(v0_arr, 0);
+    IntVector v2_hv = v1.reinterpretAsInts();
+    LongVector v3 = v2_hv.reinterpretAsLongs();
+    long v4 = v3.lane(1);
+    LongVector v5 = (LongVector) LongVector.SPECIES_128.broadcast(v4);
+    IntVector v6 = v5.reinterpretAsInts();
+    v2_hv = v2_hv.lanewise(VectorOperators.XOR, v6);
+    LongVector v7 = v2_hv.reinterpretAsLongs();
+    LongVector v8 = v7.lanewise(VectorOperators.LSHR, 32);
+    IntVector v9 = v8.reinterpretAsInts();
+    v2_hv = v2_hv.lanewise(VectorOperators.XOR, v9);
+    IntVector v10 = (v2_hv);
+    IntVector v11 = v10.lanewise(VectorOperators.ASHR, 16);
+    IntVector v12 = (v11);
+    v2_hv = v2_hv.lanewise(VectorOperators.XOR, v12);
+    int v13 = v2_hv.lane(0);
+    return v13;
+  }
+}
 private final short[] arr_1 = new short[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 private final static byte[] arr_2 = new byte[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 private final long[] arr_3 = new long[4];
@@ -609,6 +633,7 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
     return;
   }
 }
+// todo export
 // todo export
 // todo export
 // todo export

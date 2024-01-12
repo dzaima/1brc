@@ -15,7 +15,29 @@ static uint64_t si_f1_core_1brc_periter() {
   return ((uint64_t)10624ull);
 }
 
-static void si_f2_core_1brc(int32_t v0_ident, uint64_t* v1_buf0, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
+static uint32_t si_f2_hash_1brc(int8_t* v0_arr) {
+  int8_t* v1 = v0_arr + ((uint64_t)0ull);
+  __m128i* v2 = (__m128i*)v1;
+  __m128i* v3 = v2 + ((int64_t)0ll);
+  __m128i v4 = _mm_loadu_si128(v3);
+  __m128i v5_hv = v4;
+  __m128i v6 = _mm_shuffle_epi32(v5_hv, 238);
+  v5_hv = _mm_xor_si128(v5_hv, v6);
+  __m128i v7 = v5_hv;
+  __m128i v8 = _mm_srli_epi64(v7, 32);
+  __m128i v9 = v8;
+  v5_hv = _mm_xor_si128(v5_hv, v9);
+  __m128i v10 = v5_hv;
+  __m128i v11 = _mm_srai_epi32(v10, 16);
+  __m128i v12 = v11;
+  v5_hv = _mm_xor_si128(v5_hv, v12);
+  __m128i v13 = v5_hv;
+  int32_t v14 = _mm_extract_epi32(v13, 0);
+  uint32_t v15 = (uint32_t)v14;
+  return v15;
+}
+
+static void si_f3_core_1brc(int32_t v0_ident, uint64_t* v1_buf0, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
   uint64_t v8_off = ((uint64_t)132ull);
   uint64_t v9_off = ((uint64_t)1136ull);
   uint64_t v10_off = ((uint64_t)2140ull);
@@ -647,5 +669,7 @@ uint64_t (*const core_1brc_buf_elts)() = si_f0_core_1brc_buf_elts;
 
 uint64_t (*const core_1brc_periter)() = si_f1_core_1brc_periter;
 
-void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f2_core_1brc;
+uint32_t (*const hash_1brc)(int8_t*) = si_f2_hash_1brc;
+
+void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f3_core_1brc;
 

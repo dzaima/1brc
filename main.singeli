@@ -66,6 +66,22 @@ def ly = buflayout{
 def periter = bulk * interleaved * iter_count{bulk}
 fn core_1brc_buf_elts() : ux = ly{'.size'}
 fn core_1brc_periter() : ux = periter
+export{'core_1brc_buf_elts', core_1brc_buf_elts}
+export{'core_1brc_periter', core_1brc_periter}
+
+
+def hash_vec{x:V & eltype{V}==i8} = {
+  def HX = re_el{HASH, V}
+  hv:= HX~~x
+  hv^= l128_upper_u64{hv}
+  hv^= l128_shrb8{hv,4}
+  hv^= hv >>{i32} 16
+  hv # &{u32} 255 # for testing hash collision behavior
+}
+
+fn hash_1brc(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
+export{'hash_1brc', hash_1brc}
+
 
 
 def dt_sum = 0
@@ -139,14 +155,6 @@ fn core_1brc(
   
   tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
   def VX = [exp_bulk]i8
-  def hash_vec{x:V & eltype{V}==i8} = {
-    def HX = re_el{HASH, V}
-    hv:= HX~~x
-    hv^= l128_upper_u64{hv}
-    hv^= l128_shrb8{hv,4}
-    hv^= hv >>{i32} 16
-    # hv = hv &{u32} 255 # for testing hash collision behavior
-  }
   
   ########## PROCESSING ##########
   @for(buf_i to interleaved) {
@@ -360,9 +368,6 @@ fn core_1brc(
     }
   }
 }
-
-export{'core_1brc_buf_elts', core_1brc_buf_elts}
-export{'core_1brc_periter', core_1brc_periter}
 export{'core_1brc', core_1brc}
 
 (if (is_java or playground) {

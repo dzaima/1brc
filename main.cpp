@@ -128,23 +128,23 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int32_t)sample);
 }
 static void add_any_slow(ux nameEnd, int sample) {
-  uint32_t hash = 0;
-  uint8_t sh = 24;
   ux nameStart = nameEnd;
   while (nameStart>=1) {
     char c = input[nameStart-1];
     if (c=='\n') break;
-    hash^= (c&0xff) << sh;
     nameStart--;
-    sh-= 8;
   }
-  if (nameEnd-nameStart >= exp_bulk) {
+  ux len = nameEnd-nameStart;
+  if (len >= exp_bulk) {
     add_long(nameStart, nameEnd, sample);
     return;
   }
-  hash^= (uint32_t)(((int32_t)hash) >> 16);
-  // hash&= 255; // for testing hash collision behavior
-  add_short(nameStart, nameEnd, sample, hash);
+  
+  int8_t buf[exp_bulk];
+  memset(buf, 0, exp_bulk);
+  memcpy(buf+exp_bulk-len, input+nameStart, len);
+  
+  add_short(nameStart, nameEnd, sample, hash_1brc(buf));
 }
 extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, int hash) {
   add_short(nameStart, nameEnd, sample, hash);
