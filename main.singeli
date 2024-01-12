@@ -56,14 +56,10 @@ def cycle_make{V, ...vs} = make{V, cycle{vcount{V}, vs}}
 def iter_count{bulk} = (bufmax/(interleaved*takes0{bulk})) >> 0
 oper ~* re_el infix right 55
 
-def ly = buflayout{
-  1, 128, 'pad',
-  interleaved, bufmax+proc_bulk, 'bufs',
-  1, 128, 'pad',
-}
+def bufmax2 = bufmax+proc_bulk
 
 def periter = bulk * interleaved * iter_count{bulk}
-fn core_1brc_buf_elts() : ux = ly{'.size'}
+fn core_1brc_buf_elts() : ux = bufmax2 * interleaved
 fn core_1brc_periter() : ux = periter
 export{'core_1brc_buf_elts', core_1brc_buf_elts}
 export{'core_1brc_periter', core_1brc_periter}
@@ -90,7 +86,7 @@ def dt_max = 3
 def DATA = if (is_java) i64 else i32
 fn core_1brc(
   ident:i32,
-  buf0:*vptr_store,
+  bufdata:*ux,
   
   hash_mask:HASH, # map length (power of two), minus 1
   
@@ -105,43 +101,44 @@ fn core_1brc(
   def takes = takes0{bulk}
   
   def ri = range{interleaved}
-  def bufs = each{ly{'bufs'}{buf0, .}, ri}
+  def bufstart{i} = i * bufmax2
+  def bufcs = each{{i} => { pos:ux = bufstart{i} }, ri}
   bufEnds:*ux = object_arr{ux, interleaved}
   
   ########## SEMICOLON SEARCH ##########
-  def ptrs = each{{i} => vptr{inp, inpOff + i*bulk}, ri}
+  def inpcs = each{{i} => { pos:ux = inpOff + i*bulk }, ri}
   @for(i to iter_count{bulk}) {
-    def ms0 = each{{ptr} => homMask{ptr{'load', [bulk]i8, 0} == 59}, ptrs}
+    def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
     
     def ms = each{{x} => {m:=x}, ms0}
-    def adv_mask{buf, ptr, m, j, m0tmp} = {
+    def adv_mask{bufc, inpc, m, j, m0tmp} = {
       m2:= m & (m-1)
-      buf{'store', j, ptr{'to_store', ctz{m}}} # TODO move to_store to a vectorized add at the end?
+      store{bufdata, bufc+j, inpc+ctz{m}} # TODO move to_store to a vectorized add at the end?
       m = m2
     }
     @for_const(j to takes) {
-      each{{ptr, buf, m,m0} => adv_mask{buf, ptr, m, j, m0}, ptrs, bufs, ms,ms0}
+      each{{inpc, bufc, m,m0} => adv_mask{bufc, inpc, m, j, m0}, inpcs, bufcs, ms,ms0}
     }
     
-    each{{i, m0, m, buf, ptr} => {
+    each{{i, m0, m, bufc, inpc} => {
       pop:= popc{m0}
       if (rare{pop > takes}) { # TODO move to an outer if that checks if any is over?
-        buf{'bump', takes}
+        bufc+= takes
         do {
-          adv_mask{buf, ptr, m, 0, m0}
-          buf{'bump', 1}
+          adv_mask{bufc, inpc, m, 0, m0}
+          bufc+= 1
         } while (m != 0)
       } else {
-        buf{'bump', pop}
+        bufc+= pop
       }
-      ptr{'bump', bulk*interleaved}
-    }, ri, ms0, ms, bufs, ptrs}
+      inpc+= bulk*interleaved
+    }, ri, ms0, ms, bufcs, inpcs}
   }
   
-  each{{i, buf} => {
-    store{bufEnds, i, buf{'to_store',0}}
-    @for_const(i to proc_bulk) buf{'store', i, exp_bulk} # allow reading a record at a past-the-end buf entry
-  }, ri, bufs}
+  each{{i, bufc} => {
+    store{bufEnds, i, bufc}
+    @for_const(i to proc_bulk) store{bufdata, bufc+i, exp_bulk} # allow reading a record at a past-the-end buf entry
+  }, ri, bufcs}
   
   
   
@@ -159,8 +156,8 @@ fn core_1brc(
   failposC:ux = 0
   
   @for(buf_i to interleaved) {
-    def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
-    def bufE = vptr{buf0, load{bufEnds, buf_i}}
+    def bufS = vptr{bufdata, bufstart{buf_i}}
+    def bufE = vptr{bufdata, load{bufEnds, buf_i}}
     
   ########## PROCESSING ITERATION ##########
     retctr:ux = 0
