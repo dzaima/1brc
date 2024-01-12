@@ -110,6 +110,8 @@ if (hasarch{'AVX2'}) {
   def full_ne{x:T, y:T} = ~(x===y)
   def v_eq{a:T, b:T} = a==b
   def v_ne{a:T, b:T} = a!=b
+  def madd{a:[8]i16, b:[8]i16} = emit{[4]i32, '_mm_madd_epi16', a, b}
+  def madd{a:[16]u8, b:[16]i8} = emit{[8]i16, '_mm_maddubs_epi16', a, b}
   def madd{a:[16]i16, b:[16]i16} = emit{[8]i32, '_mm256_madd_epi16', a, b}
   def madd{a:[32]u8, b:[32]i8} = emit{[16]i16, '_mm256_maddubs_epi16', a, b}
   def madd{a:[32]i8, b:[32]u8} = madd{b,a}

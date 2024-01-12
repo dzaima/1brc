@@ -71,6 +71,7 @@ def hash_vec{x:V & eltype{V}==i8} = {
   hv^= l128_upper_u64{hv}
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
+  # hv = HX~~madd{i16~*hv, i16~*hv}
   hv # &{u32} 255 # for testing hash collision behavior
 }
 
@@ -156,15 +157,15 @@ fn core_1brc(
   failposC:ux = 0
   
   @for(buf_i to interleaved) {
-    def bufS = vptr{bufdata, bufstart{buf_i}}
-    def bufE = vptr{bufdata, load{bufEnds, buf_i}}
+    bufS:= bufstart{buf_i}
+    bufE:= load{bufEnds, buf_i}
     
   ########## PROCESSING ITERATION ##########
     retctr:ux = 0
     def buf_end = makelabel{}
-    while (bufS{'lt', bufE}) { # proc_bulk records per iteration
+    while (bufS < bufE) { # proc_bulk records per iteration
       ########## NUMBER PARSING ##########
-      idxs:= bufS{'load', VIX, 0}
+      idxs:= load{VIX, bufdata, bufS}
       nums:= VI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
       nums = nums &{u64} 7r0xff # make last byte 0
       
@@ -219,7 +220,7 @@ fn core_1brc(
       
       
       ########## HASHING ##########
-      def left = bufE{'sub',bufS}
+      def left = bufE - bufS
       
       # hashes two rows of names at a time on native; on Java that's slower :/
       def hashn = if (is_java) 1 else 2
@@ -228,7 +229,7 @@ fn core_1brc(
       def get_temp{ij} = load{temp_buf, ij*4}
       def to_fail{ij} = {
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
-        store{failbuf, failposC, bufS{'load', ij}}
+        store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
         failposC+= 2
       }
@@ -260,7 +261,7 @@ fn core_1brc(
         # load names
         def {parts, total} = {
           def for_vs{G} = @for_const(j to hashn) {
-            off:= bufS{'load', ib + j}
+            off:= load{bufdata, bufS + ib + j}
             G{load{VX, inp, off-exp_bulk}}
           }
           if (is_java or hashn==1) {
@@ -337,7 +338,7 @@ fn core_1brc(
       
       if (one and ++retctr >= 7) return{}
       
-      bufS{'bump', vcount{VIX}}
+      bufS+= vcount{VIX}
     }
     setlabel{buf_end}
   }

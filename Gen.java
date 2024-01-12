@@ -314,15 +314,15 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
       l14: while(true) {
         boolean v181 = v180_i < 4;
         if (!v181) break l15;
-        int v182_off = v180_i * 1004;
-        int v183_off = v12_bufEnds[v180_i];
+        int v182_bufS = v180_i * 1004;
+        int v183_bufE = v12_bufEnds[v180_i];
         int v184_retctr = 0;
         l16: {
           l18: {
             l17: while(true) {
-              boolean v185 = v182_off < v183_off;
+              boolean v185 = v182_bufS < v183_bufE;
               if (!v185) break l18;
-              IntVector v186_idxs = (IntVector) IntVector.SPECIES_128.fromArray(v1_bufdata, v182_off);
+              IntVector v186_idxs = (IntVector) IntVector.SPECIES_128.fromArray(v1_bufdata, v182_bufS);
               int v187 = v186_idxs.lane(0);
               int v188 = 1 + v187;
               ByteVector v189 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v188);
@@ -410,14 +410,14 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
               v252_each16 = v252_each16.lanewise(VectorOperators.XOR, v261_neg);
               v252_each16 = v252_each16.sub(v261_neg);
               v252_each16.intoArray(v175_temp_buf, 0);
-              int v263 = v183_off - v182_off;
+              int v263 = v183_bufE - v182_bufS;
               int v264_i = 0;
               l20: {
                 l19: while(true) {
                   boolean v265 = v264_i < 4;
                   if (!v265) break l20;
                   int v266 = v264_i * 1;
-                  int v267 = v182_off + v266;
+                  int v267 = v182_bufS + v266;
                   int v268_off = v1_bufdata[v267];
                   int v269 = v268_off - 16;
                   ByteVector v270 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v269);
@@ -468,7 +468,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
                   l24: {
                     l23: {
                       if (!v303) break l23;
-                      int v304 = v182_off + v266;
+                      int v304 = v182_bufS + v266;
                       int v305 = v1_bufdata[v304];
                       v177_failbuf[v179_failposC] = v305;
                       int v307 = v179_failposC + 1;
@@ -488,7 +488,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
                     l26: {
                       l25: {
                         if (!v316) break l25;
-                        int v317 = v182_off + v266;
+                        int v317 = v182_bufS + v266;
                         int v318 = v1_bufdata[v317];
                         v177_failbuf[v179_failposC] = v318;
                         int v320 = v179_failposC + 1;
@@ -525,7 +525,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
                   break;
                 }
               }
-              v182_off = v182_off + 4;
+              v182_bufS = v182_bufS + 4;
               if (1==1) continue l17;
               break;
             }
