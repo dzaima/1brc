@@ -54,6 +54,7 @@ def l128_upper_u64{x:T & width{T}==256} = shuf{[4]u64, x, 1, 1, 3, 3}
 def cycle_make{V, ...vs} = make{V, cycle{vcount{V}, vs}}
 
 def iter_count{bulk} = (bufmax/(interleaved*takes0{bulk})) >> 0
+oper ~* re_el infix right 55
 
 def ly = buflayout{
   1, 128, 'pad',
@@ -71,7 +72,7 @@ export{'core_1brc_periter', core_1brc_periter}
 
 
 def hash_vec{x:V & eltype{V}==i8} = {
-  def HX = re_el{HASH, V}
+  def HX = HASH~*V
   hv:= HX~~x
   hv^= l128_upper_u64{hv}
   hv^= l128_shrb8{hv,4}
@@ -147,8 +148,8 @@ fn core_1brc(
   }, ri, bufs}
   
   def VI64 = [proc_bulk]i64
-  def VI16 = re_el{i16, VI64}
-  def VI8  = re_el{i8,  VI64}
+  def VI16 = i16~*VI64
+  def VI8  =  i8~*VI64
   
   temp_buf:*i16 = object_arr{i16, vcount{VI16}**0}
   
@@ -192,8 +193,8 @@ fn core_1brc(
         if (is_java) off&= l128shufb_mask{VI8}
         aligned:= l128shufb{nums, off}
         aligned = to_digits{aligned}
-        t16:= madd{re_el{u8,aligned}, cycle_make{VI8,  10,1,1,0}}
-        t32:= madd{t16,               cycle_make{VI16, 10,1}}
+        t16:= madd{u8~*aligned, cycle_make{VI8,  10,1,1,0}}
+        t32:= madd{t16,         cycle_make{VI16, 10,1}}
         VI16~~t32
       } else {
         
@@ -236,7 +237,7 @@ fn core_1brc(
       @for (i to proc_bulk/hashn) {
         def ib = i*hashn
         def mask_newline{v:T} = if (width{T}==256) {
-          def V64 = re_el{u64, T}
+          def V64 = u64~*T
           a:= V64~~v_eq{v, 10}
           l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
           else l128shrb{a, 8}
@@ -273,7 +274,7 @@ fn core_1brc(
         }
         
         # hash
-        def VHX = re_el{HASH, VVX}
+        def VHX = HASH~*VVX
         hv:VHX = hash_vec{total}
         
         def update{ij, idx} = {
@@ -371,10 +372,10 @@ export{'core_1brc', core_1brc}
 
 (if (is_java or playground) {
   fn minibench(ai8:*i8, ai16:*i16, ai32:*i32, ai64:*i64) : void = @withbufs(object_arr) {
-    def VI8  = [16]i8;          def VU8  = ty_u{VI8}
-    def VI16 = re_el{i16, VI8}; def VU16 = ty_u{VI16}
-    def VI32 = re_el{i32, VI8}; def VU32 = ty_u{VI32}
-    def VI64 = re_el{i64, VI8}; def VU64 = ty_u{VI64}
+    def VI8  = [16]i8;   def VU8  =  u8~*VI8
+    def VI16 = i16~*VI8; def VU16 = u16~*VI8
+    def VI32 = i32~*VI8; def VU32 = u32~*VI8
+    def VI64 = i64~*VI8; def VU64 = u64~*VI8
     @for (i to 1000) {
       def V = VI8
       def arr = match(elwidth{V}) { {(8)}=>ai8; {(16)}=>ai16; {(32)}=>ai32; {(64)}=>ai64 }
