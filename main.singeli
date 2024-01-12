@@ -155,8 +155,9 @@ fn core_1brc(
   tail_mask:*i8 = static_arr{i8, merge{exp_bulk**0, exp_bulk ** -1}}
   # search & update stuff
   def VX = [exp_bulk]i8
-  def failposS = ly{'faildata'}{buf0, 0}
-  def failposC = failposS{'copy'}
+  failbuf:= object_arr{ux, bufmax*interleaved*2}
+  failposS:ux = 0
+  failposC:ux = 0
   
   @for(buf_i to interleaved) {
     def bufS = vptr{buf0, ly{'bufs'}{buf_i}}
@@ -231,9 +232,9 @@ fn core_1brc(
       def get_temp{ij} = load{temp_buf, ij*4}
       def to_fail{ij} = {
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
-        failposC{'store', 0, bufS{'load', ij}}
-        failposC{'store', 1, promote{vptr_store, get_temp{ij}}}
-        failposC{'bump', 2}
+        store{failbuf, failposC, bufS{'load', ij}}
+        store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
+        failposC+= 2
       }
       
       @for (i to proc_bulk/hashn) {
@@ -346,10 +347,10 @@ fn core_1brc(
   }
   
   # handle fails
-  if (not playground) while (failposS{'lt', failposC}) {
-    def end = failposS{'load', 0}
-    def temp = ty_s{failposS{'load', 1}}
-    failposS{'bump', 2}
+  if (not playground) while (failposS < failposC) {
+    def end = load{failbuf, failposS}
+    def temp = ty_s{load{failbuf, failposS+1}}
+    failposS+= 2
     def case{which, start, ...hash} = {
       if (is_java) emit{void, merge{'main.Main.failed_',which}, ident, start, end, temp, ...hash}
       else         emit{void, merge{          'failed_',which},        start, end, temp, ...hash}
