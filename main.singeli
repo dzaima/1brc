@@ -210,8 +210,8 @@ fn core_1brc(
         aligned16 = to_digits{aligned16}
         
         aligned16*= cycle_make{VI16, 100,10,1,0} # multiply by the place
-        aligned16 = aligned16 + (aligned16 >>{u64} 32) # sum the parts
-        aligned16 = aligned16 + (aligned16 >>{u64} 16)
+        aligned16+= aligned16 >>{u64} 32 # sum the parts
+        aligned16+= aligned16 >>{u64} 16
         tup{0, aligned16}
       }
       
