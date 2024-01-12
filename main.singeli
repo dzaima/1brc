@@ -227,7 +227,7 @@ fn core_1brc(
         def mask_newline{v:T} = if (width{T}==256) {
           def V64 = re_el{u64, T}
           a:= V64~~v_eq{v, 10}
-          l:= if (is_java) l128_upper_u64{a} & make{V64, cycle{vcount{V64}, tup{-1,0}}}
+          l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
           else emit{V64, (if (width{V64}==256) '_mm256_bsrli_epi128' else '_mm_bsrli_si128'), a, 8}
           a = a | v_ne{l, 0}
           # a = a | a >> 8
