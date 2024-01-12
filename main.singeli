@@ -199,8 +199,8 @@ fn core_1brc(
         aligned16 = to_digits{aligned16}
         
         aligned16*= cycle_make{VI16, 100,10,1,0} # multiply by the place
-        aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>32) # sum the parts
-        aligned16 = aligned16 + VI16~~((VU64~~aligned16)>>16)
+        aligned16 = aligned16 + (aligned16 >>{VU64} 32) # sum the parts
+        aligned16 = aligned16 + (aligned16 >>{VU64} 16)
       }
       
       # negate negative numbers
@@ -233,11 +233,11 @@ fn core_1brc(
           a:= V64~~v_eq{v, 10}
           l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
           else l128shrb{a, 8}
-          a = a | v_ne{l, 0}
+          a|= v_ne{l, 0}
           if (0) {
-            a = a | l128_shrb8{a, 1}
-            a = a | l128_shrb8{a, 2}
-            a = a | l128_shrb8{a, 4}
+            a|= l128_shrb8{a, 1}
+            a|= l128_shrb8{a, 2}
+            a|= l128_shrb8{a, 4}
             v &~ T~~a
           } else {
             a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
