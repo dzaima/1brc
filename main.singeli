@@ -212,7 +212,7 @@ fn core_1brc(
   def bufcs = each{new{ux}, each{bufstart, ri}}
   bufEnds:*ux = object_arr{ux, interleaved}
   
-  ########## SEMICOLON SEARCH ##########
+  # semicolon search
   def inpcs = each{{i} => new{inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
     def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
@@ -242,6 +242,9 @@ fn core_1brc(
     }, ri, ms0, ms, bufcs, inpcs}
   }
   
+  
+  
+  # preparation for core loop
   semi:ux = 0
   each{{i, bufc} => { # find the location of a semicolon
     def buf0 = bufstart{i}
@@ -256,9 +259,8 @@ fn core_1brc(
   
   
   
-  ########## PROCESSING ##########
+  # core proessing loop
   temp_buf:*i16 = object_arr{i16, vcount{VNI16}**0}
-  # search & update stuff
   def VX = [exp_bulk]i8
   failbuf:= object_arr{ux, bufmax*interleaved*2}
   failposS:ux = 0
@@ -268,13 +270,10 @@ fn core_1brc(
     bufS:= bufstart{buf_i}
     bufE:= load{bufEnds, buf_i}
     
-    ########## PROCESSING ITERATION ##########
     retctr:ux = 0
     def buf_end = makelabel{}
     while (bufS < bufE) { # proc_bulk records per iteration
-      ########## DEFS ##########
-      def left = bufE - bufS
-      
+      # definitions for the below ops
       def maskload{n, ib} = { # load n names & mask each to newline; returns tup{tup{...each_individual_name}, merged_vector_of_them}
         def for_vs{G} = @for_const(j to n) {
           off:= load{bufdata, bufS + ib + j}
@@ -315,7 +314,7 @@ fn core_1brc(
       
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
       def to_fail{ij} = { # didn't find ij'th record in map
-        if (rare{ij >= left}) goto{buf_end}
+        if (rare{ij >= bufE-bufS}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
@@ -335,6 +334,7 @@ fn core_1brc(
         upd{dt_num, {v} => v + 1}
       }
       
+      # hashing & map lookup
       def loadn = 1
       def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
       def hvs = each{hash_vec, totals}
@@ -344,11 +344,12 @@ fn core_1brc(
       }
       def exps = each{get_exp, idxs}
       
-      ########## NUMBER PARSING ##########
+      # number parsing
       num_idxs:= load{VIX, bufdata, bufS}
       nums:= i8~*gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
       def num_off = parse_nums{temp_buf, nums}
       
+      # updating
       each{{ij, idx, got, exp} => {
         if (likely{got === exp}) update{ij, idx}
         else to_fail{ij}
