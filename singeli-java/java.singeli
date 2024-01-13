@@ -68,6 +68,7 @@ def __not{x:T & veci{T}} = emit{T, 'method not', x}
 
 def __shr{x:T, y & vecs{T}} = lanewise{x, y, 'ASHR'}
 def __shr{x:T, y & vecu{T}} = lanewise{x, y, 'LSHR'}
+def __shl{x:T, y & vecu{T}} = lanewise{x, y, 'LSHL'}
 
 def __subs{x,y} = fail{'no saturating arith'}
 

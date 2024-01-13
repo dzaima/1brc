@@ -195,7 +195,6 @@ fn core_1brc(
       ########## NUMBER PARSING ##########
       idxs:= load{VIX, bufdata, bufS}
       nums:= VI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
-      
       def low8_64 = l128shufb_ident{VI8} - cycle{vcount{VI8}, range{8}} # shuf nums for low byte within i64
       
       def to_digits{v} = { # convert to digits, mapping '\n' and '.' to 0
@@ -203,7 +202,7 @@ fn core_1brc(
         else __subs{u8}{v, 48}
       }
       
-      def {num_off, each16} = if (not is_java) {
+      def {num_off, each16} = if (1) {
         # nums     off aligned
         # 01234567     01234567
         # 8.5↩ABCD 0   ^^^^^8.5
@@ -214,9 +213,17 @@ fn core_1brc(
         nums = nums <<{u64} ((5<<3) -{u64} off)
         
         aligned:= to_digits{nums}
-        t16:= madd{u8~*aligned, cycle_make{VI8,  10,1,0,1}} # TODO perhaps a single _mm256_mul_epi32 can work?
-        t32:= madd{t16,         cycle_make{VI16, 10,1}}
-        tup{2, VI16~~t32}
+        if (is_java) {
+          def aligned16 = u16~*aligned
+          r:= (aligned16 &{u32} 0xff) * 100
+          r+= (aligned16 * 10) >>{u16} 8
+          r+= (aligned16 >>{u32} 24)
+          tup{2, VI16~~r}
+        } else {
+          t16:= madd{u8~*aligned, cycle_make{VI8,  10,1,0,1}} # TODO perhaps a single _mm256_mul_epi32 can work?
+          t32:= madd{t16,         cycle_make{VI16, 10,1}}
+          tup{2, VI16~~t32}
+        }
       } else {
         # nums     off1     off2     aligned16
         # 01234567 01234567 01234567 01234567
