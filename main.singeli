@@ -234,9 +234,16 @@ fn core_1brc(
     }, ri, ms0, ms, bufcs, inpcs}
   }
   
+  semi:ux = 0
+  each{{i, bufc} => { # find the location of a semicolon
+    def buf0 = bufstart{i}
+    if (buf0 != bufc) semi = load{bufdata, buf0}
+  }, ri, bufcs}
   each{{i, bufc} => {
     store{bufEnds, i, bufc}
-    @for_const(i to proc_bulk) store{bufdata, bufc+i, exp_bulk} # allow reading a record at a past-the-end buf entry
+    # set read-past-the-end indices to an invalid (0-char) name
+    # won't be found in hashtable, and then to_fail will discard it
+    @for_const(i to proc_bulk) store{bufdata, bufc+i, semi+1}
   }, ri, bufcs}
   
   
@@ -257,20 +264,11 @@ fn core_1brc(
     retctr:ux = 0
     def buf_end = makelabel{}
     while (bufS < bufE) { # proc_bulk records per iteration
-      ########## NUMBER PARSING ##########
-      idxs:= load{VIX, bufdata, bufS}
-      nums:= VNI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
-      def num_off = parse_nums{temp_buf, nums}
-      
-      ########## HASHING ##########
+      ########## DEFS ##########
       def left = bufE - bufS
-      
-      # hashes two rows of names at a time on native; on Java that's slower :/
-      def hashn = if (is_java) 1 else 2
-      def VVX = [hashn * exp_bulk]i8
-      
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
       def to_fail{ij} = {
+        if (rare{ij >= left}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
@@ -290,7 +288,16 @@ fn core_1brc(
         upd{dt_num, {v} => v + 1}
       }
       
+      ########## NUMBER PARSING ##########
+      idxs:= load{VIX, bufdata, bufS}
+      nums:= VNI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
+      def num_off = parse_nums{temp_buf, nums}
       
+      ########## HASHING ##########
+      
+      # hashes two rows of names at a time on native; on Java that's slower :/
+      def hashn = if (is_java) 1 else 2
+      def VVX = [hashn * exp_bulk]i8
       
       @for (i to proc_bulk/hashn) {
         def ib = i*hashn
@@ -331,7 +338,6 @@ fn core_1brc(
           }
           each{{j, idx} => {
             def ij = ib + j
-            if (rare{ij >= left}) goto{buf_end}
             exp:= load{VX, map_exp, idx*exp_bulk}
             if (exp !== select{parts,j}) {
               to_fail{ij}

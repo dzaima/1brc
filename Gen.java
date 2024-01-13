@@ -249,327 +249,374 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
       break;
     }
   }
-  v12_bufEnds[0] = v8_pos;
-  v1_bufdata[v8_pos] = 16;
-  int v145 = v8_pos + 1;
-  v1_bufdata[v145] = 16;
-  int v147 = v8_pos + 2;
-  v1_bufdata[v147] = 16;
-  int v149 = v8_pos + 3;
-  v1_bufdata[v149] = 16;
-  v12_bufEnds[1] = v9_pos;
-  v1_bufdata[v9_pos] = 16;
-  int v153 = v9_pos + 1;
-  v1_bufdata[v153] = 16;
-  int v155 = v9_pos + 2;
-  v1_bufdata[v155] = 16;
-  int v157 = v9_pos + 3;
-  v1_bufdata[v157] = 16;
-  v12_bufEnds[2] = v10_pos;
-  v1_bufdata[v10_pos] = 16;
-  int v161 = v10_pos + 1;
-  v1_bufdata[v161] = 16;
-  int v163 = v10_pos + 2;
-  v1_bufdata[v163] = 16;
-  int v165 = v10_pos + 3;
-  v1_bufdata[v165] = 16;
-  v12_bufEnds[3] = v11_pos;
-  v1_bufdata[v11_pos] = 16;
-  int v169 = v11_pos + 1;
-  v1_bufdata[v169] = 16;
-  int v171 = v11_pos + 2;
-  v1_bufdata[v171] = 16;
-  int v173 = v11_pos + 3;
-  v1_bufdata[v173] = 16;
-  short[] v175_temp_buf = arr_2;
-  int[] v176_failbuf = arr_3;
-  int v177_failposS = 0;
-  int v178_failposC = 0;
-  int v179_i = 0;
+  int v143_semi = 0;
+  boolean v144 = 0 != v8_pos;
+  l14: {
+    if (!v144) break l14;
+    v143_semi = v1_bufdata[0];
+  }
+  boolean v145 = 1004 != v9_pos;
   l15: {
-    l14: while(true) {
-      boolean v180 = v179_i < 4;
-      if (!v180) break l15;
-      int v181_bufS = v179_i * 1004;
-      int v182_bufE = v12_bufEnds[v179_i];
-      int v183_retctr = 0;
-      l16: {
-        l18: {
-          l17: while(true) {
-            boolean v184 = v181_bufS < v182_bufE;
-            if (!v184) break l18;
-            IntVector v185_idxs = (IntVector) IntVector.SPECIES_128.fromArray(v1_bufdata, v181_bufS);
-            int v186 = v185_idxs.lane(0);
-            int v187 = 1 + v186;
-            ByteVector v188 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v187);
-            LongVector v189 = v188.reinterpretAsLongs();
-            long v190 = v189.lane(0);
-            int v191 = v185_idxs.lane(1);
-            int v192 = 1 + v191;
-            ByteVector v193 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v192);
-            LongVector v194 = v193.reinterpretAsLongs();
-            long v195 = v194.lane(0);
-            int v196 = v185_idxs.lane(2);
-            int v197 = 1 + v196;
-            ByteVector v198 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v197);
-            LongVector v199 = v198.reinterpretAsLongs();
-            long v200 = v199.lane(0);
-            int v201 = v185_idxs.lane(3);
-            int v202 = 1 + v201;
-            ByteVector v203 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v202);
-            LongVector v204 = v203.reinterpretAsLongs();
-            long v205 = v204.lane(0);
-            long[] v206 = arr_4;
-            v206[0] = v190;
-            v206[1] = v195;
-            v206[2] = v200;
-            v206[3] = v205;
-            LongVector v211 = (LongVector) LongVector.SPECIES_256.fromArray(v206, 0);
-            ByteVector v212_nums = v211.reinterpretAsBytes();
-            ByteVector v213 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)46);
-            VectorMask<?> v214 = v212_nums.compare(VectorOperators.EQ, v213);
-            ByteVector v215 = (ByteVector) v214.toVector();
-            ByteVector v216 = (v215);
-            IntVector v217 = v216.reinterpretAsInts();
-            IntVector v218 = v217.lanewise(VectorOperators.ASHR, 20);
-            ByteVector v219 = v218.reinterpretAsBytes();
-            LongVector v220 = v219.reinterpretAsLongs();
-            LongVector v221 = (LongVector) LongVector.SPECIES_256.broadcast(24L);
-            LongVector v222 = v220.and(v221);
-            ByteVector v223_off = v222.reinterpretAsBytes();
-            LongVector v224 = (LongVector) LongVector.SPECIES_256.broadcast(40L);
-            LongVector v225 = v223_off.reinterpretAsLongs();
-            LongVector v226 = v224.sub(v225);
-            ByteVector v227 = v226.reinterpretAsBytes();
-            LongVector v228 = v212_nums.reinterpretAsLongs();
-            LongVector v229 = v227.reinterpretAsLongs();
-            LongVector v230 = v228.lanewise(VectorOperators.LSHL, v229);
-            v212_nums = v230.reinterpretAsBytes();
-            ByteVector v231 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)48);
-            ByteVector v232 = v212_nums.sub(v231);
-            ByteVector v233 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
-            ByteVector v234_aligned = v232.max(v233);
-            ShortVector v235 = v234_aligned.reinterpretAsShorts();
-            IntVector v236 = v235.reinterpretAsInts();
-            IntVector v237 = (IntVector) IntVector.SPECIES_256.broadcast(255);
-            IntVector v238 = v236.and(v237);
-            ShortVector v239 = v238.reinterpretAsShorts();
-            ShortVector v240 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)100);
-            ShortVector v241_r = v239.mul(v240);
-            ShortVector v242 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)10);
-            ShortVector v243 = v235.mul(v242);
-            ShortVector v244 = v243.lanewise(VectorOperators.LSHR, 8);
-            v241_r = v241_r.add(v244);
-            IntVector v245 = v235.reinterpretAsInts();
-            IntVector v246 = v245.lanewise(VectorOperators.LSHR, 24);
-            ShortVector v247 = v246.reinterpretAsShorts();
-            v241_r = v241_r.add(v247);
-            ShortVector v248 = (v241_r);
-            ByteVector v249 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)45);
-            VectorMask<?> v250 = v212_nums.compare(VectorOperators.EQ, v249);
-            ByteVector v251 = (ByteVector) v250.toVector();
-            LongVector v252 = v251.reinterpretAsLongs();
-            LongVector v253 = (LongVector) LongVector.SPECIES_256.broadcast(0L);
-            VectorMask<?> v254 = v252.compare(VectorOperators.NE, v253);
-            LongVector v255 = (LongVector) v254.toVector();
-            ByteVector v256 = v255.reinterpretAsBytes();
-            ShortVector v257_neg = v256.reinterpretAsShorts();
-            ShortVector v258_each16n = v248.lanewise(VectorOperators.XOR, v257_neg);
-            v258_each16n = v258_each16n.sub(v257_neg);
-            v258_each16n.intoArray(v175_temp_buf, 0);
-            int v260 = v182_bufE - v181_bufS;
-            int v261_i = 0;
-            l20: {
-              l19: while(true) {
-                boolean v262 = v261_i < 4;
-                if (!v262) break l20;
-                int v263 = v261_i * 1;
-                int v264 = v181_bufS + v263;
-                int v265_off = v1_bufdata[v264];
-                int v266 = v265_off - 16;
-                ByteVector v267 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v266);
-                ByteVector v268 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
-                VectorMask<?> v269 = v267.compare(VectorOperators.EQ, v268);
-                long v270 = v269.toLong();
-                short v271_mc = (short) v270;
-                int v272_c = 16;
-                boolean v273 = v271_mc != (short)0;
-                l21: {
-                  if (!v273) break l21;
-                  int v274 = (int) v271_mc;
-                  int v275 = v274 & 65535;
-                  int v276 = Integer.numberOfLeadingZeros(v275);
-                  v272_c = v276 - 16;
+    if (!v145) break l15;
+    v143_semi = v1_bufdata[1004];
+  }
+  boolean v146 = 2008 != v10_pos;
+  l16: {
+    if (!v146) break l16;
+    v143_semi = v1_bufdata[2008];
+  }
+  boolean v147 = 3012 != v11_pos;
+  l17: {
+    if (!v147) break l17;
+    v143_semi = v1_bufdata[3012];
+  }
+  v12_bufEnds[0] = v8_pos;
+  int v149 = v143_semi + 1;
+  v1_bufdata[v8_pos] = v149;
+  int v151 = v8_pos + 1;
+  int v152 = v143_semi + 1;
+  v1_bufdata[v151] = v152;
+  int v154 = v8_pos + 2;
+  int v155 = v143_semi + 1;
+  v1_bufdata[v154] = v155;
+  int v157 = v8_pos + 3;
+  int v158 = v143_semi + 1;
+  v1_bufdata[v157] = v158;
+  v12_bufEnds[1] = v9_pos;
+  int v161 = v143_semi + 1;
+  v1_bufdata[v9_pos] = v161;
+  int v163 = v9_pos + 1;
+  int v164 = v143_semi + 1;
+  v1_bufdata[v163] = v164;
+  int v166 = v9_pos + 2;
+  int v167 = v143_semi + 1;
+  v1_bufdata[v166] = v167;
+  int v169 = v9_pos + 3;
+  int v170 = v143_semi + 1;
+  v1_bufdata[v169] = v170;
+  v12_bufEnds[2] = v10_pos;
+  int v173 = v143_semi + 1;
+  v1_bufdata[v10_pos] = v173;
+  int v175 = v10_pos + 1;
+  int v176 = v143_semi + 1;
+  v1_bufdata[v175] = v176;
+  int v178 = v10_pos + 2;
+  int v179 = v143_semi + 1;
+  v1_bufdata[v178] = v179;
+  int v181 = v10_pos + 3;
+  int v182 = v143_semi + 1;
+  v1_bufdata[v181] = v182;
+  v12_bufEnds[3] = v11_pos;
+  int v185 = v143_semi + 1;
+  v1_bufdata[v11_pos] = v185;
+  int v187 = v11_pos + 1;
+  int v188 = v143_semi + 1;
+  v1_bufdata[v187] = v188;
+  int v190 = v11_pos + 2;
+  int v191 = v143_semi + 1;
+  v1_bufdata[v190] = v191;
+  int v193 = v11_pos + 3;
+  int v194 = v143_semi + 1;
+  v1_bufdata[v193] = v194;
+  short[] v196_temp_buf = arr_2;
+  int[] v197_failbuf = arr_3;
+  int v198_failposS = 0;
+  int v199_failposC = 0;
+  int v200_i = 0;
+  l19: {
+    l18: while(true) {
+      boolean v201 = v200_i < 4;
+      if (!v201) break l19;
+      int v202_bufS = v200_i * 1004;
+      int v203_bufE = v12_bufEnds[v200_i];
+      int v204_retctr = 0;
+      l20: {
+        l22: {
+          l21: while(true) {
+            boolean v205 = v202_bufS < v203_bufE;
+            if (!v205) break l22;
+            int v206 = v203_bufE - v202_bufS;
+            IntVector v207_idxs = (IntVector) IntVector.SPECIES_128.fromArray(v1_bufdata, v202_bufS);
+            int v208 = v207_idxs.lane(0);
+            int v209 = 1 + v208;
+            ByteVector v210 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v209);
+            LongVector v211 = v210.reinterpretAsLongs();
+            long v212 = v211.lane(0);
+            int v213 = v207_idxs.lane(1);
+            int v214 = 1 + v213;
+            ByteVector v215 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v214);
+            LongVector v216 = v215.reinterpretAsLongs();
+            long v217 = v216.lane(0);
+            int v218 = v207_idxs.lane(2);
+            int v219 = 1 + v218;
+            ByteVector v220 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v219);
+            LongVector v221 = v220.reinterpretAsLongs();
+            long v222 = v221.lane(0);
+            int v223 = v207_idxs.lane(3);
+            int v224 = 1 + v223;
+            ByteVector v225 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v224);
+            LongVector v226 = v225.reinterpretAsLongs();
+            long v227 = v226.lane(0);
+            long[] v228 = arr_4;
+            v228[0] = v212;
+            v228[1] = v217;
+            v228[2] = v222;
+            v228[3] = v227;
+            LongVector v233 = (LongVector) LongVector.SPECIES_256.fromArray(v228, 0);
+            ByteVector v234_nums = v233.reinterpretAsBytes();
+            ByteVector v235 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)46);
+            VectorMask<?> v236 = v234_nums.compare(VectorOperators.EQ, v235);
+            ByteVector v237 = (ByteVector) v236.toVector();
+            ByteVector v238 = (v237);
+            IntVector v239 = v238.reinterpretAsInts();
+            IntVector v240 = v239.lanewise(VectorOperators.ASHR, 20);
+            ByteVector v241 = v240.reinterpretAsBytes();
+            LongVector v242 = v241.reinterpretAsLongs();
+            LongVector v243 = (LongVector) LongVector.SPECIES_256.broadcast(24L);
+            LongVector v244 = v242.and(v243);
+            ByteVector v245_off = v244.reinterpretAsBytes();
+            LongVector v246 = (LongVector) LongVector.SPECIES_256.broadcast(40L);
+            LongVector v247 = v245_off.reinterpretAsLongs();
+            LongVector v248 = v246.sub(v247);
+            ByteVector v249 = v248.reinterpretAsBytes();
+            LongVector v250 = v234_nums.reinterpretAsLongs();
+            LongVector v251 = v249.reinterpretAsLongs();
+            LongVector v252 = v250.lanewise(VectorOperators.LSHL, v251);
+            v234_nums = v252.reinterpretAsBytes();
+            ByteVector v253 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)48);
+            ByteVector v254 = v234_nums.sub(v253);
+            ByteVector v255 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
+            ByteVector v256_aligned = v254.max(v255);
+            ShortVector v257 = v256_aligned.reinterpretAsShorts();
+            IntVector v258 = v257.reinterpretAsInts();
+            IntVector v259 = (IntVector) IntVector.SPECIES_256.broadcast(255);
+            IntVector v260 = v258.and(v259);
+            ShortVector v261 = v260.reinterpretAsShorts();
+            ShortVector v262 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)100);
+            ShortVector v263_r = v261.mul(v262);
+            ShortVector v264 = (ShortVector) ShortVector.SPECIES_256.broadcast((short)10);
+            ShortVector v265 = v257.mul(v264);
+            ShortVector v266 = v265.lanewise(VectorOperators.LSHR, 8);
+            v263_r = v263_r.add(v266);
+            IntVector v267 = v257.reinterpretAsInts();
+            IntVector v268 = v267.lanewise(VectorOperators.LSHR, 24);
+            ShortVector v269 = v268.reinterpretAsShorts();
+            v263_r = v263_r.add(v269);
+            ShortVector v270 = (v263_r);
+            ByteVector v271 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)45);
+            VectorMask<?> v272 = v234_nums.compare(VectorOperators.EQ, v271);
+            ByteVector v273 = (ByteVector) v272.toVector();
+            LongVector v274 = v273.reinterpretAsLongs();
+            LongVector v275 = (LongVector) LongVector.SPECIES_256.broadcast(0L);
+            VectorMask<?> v276 = v274.compare(VectorOperators.NE, v275);
+            LongVector v277 = (LongVector) v276.toVector();
+            ByteVector v278 = v277.reinterpretAsBytes();
+            ShortVector v279_neg = v278.reinterpretAsShorts();
+            ShortVector v280_each16n = v270.lanewise(VectorOperators.XOR, v279_neg);
+            v280_each16n = v280_each16n.sub(v279_neg);
+            v280_each16n.intoArray(v196_temp_buf, 0);
+            int v282_i = 0;
+            l24: {
+              l23: while(true) {
+                boolean v283 = v282_i < 4;
+                if (!v283) break l24;
+                int v284 = v282_i * 1;
+                int v285 = v202_bufS + v284;
+                int v286_off = v1_bufdata[v285];
+                int v287 = v286_off - 16;
+                ByteVector v288 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v287);
+                ByteVector v289 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
+                VectorMask<?> v290 = v288.compare(VectorOperators.EQ, v289);
+                long v291 = v290.toLong();
+                short v292_mc = (short) v291;
+                int v293_c = 16;
+                boolean v294 = v292_mc != (short)0;
+                l25: {
+                  if (!v294) break l25;
+                  int v295 = (int) v292_mc;
+                  int v296 = v295 & 65535;
+                  int v297 = Integer.numberOfLeadingZeros(v296);
+                  v293_c = v297 - 16;
                 }
-                ByteVector v277 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask, v272_c);
-                ByteVector v278 = v267.and(v277);
-                IntVector v279_hv = v278.reinterpretAsInts();
-                LongVector v280 = v279_hv.reinterpretAsLongs();
-                long v281 = v280.lane(1);
-                LongVector v282 = (LongVector) LongVector.SPECIES_128.broadcast(v281);
-                IntVector v283 = v282.reinterpretAsInts();
-                v279_hv = v279_hv.lanewise(VectorOperators.XOR, v283);
-                LongVector v284 = v279_hv.reinterpretAsLongs();
-                LongVector v285 = v284.lanewise(VectorOperators.LSHR, 32);
-                IntVector v286 = v285.reinterpretAsInts();
-                v279_hv = v279_hv.lanewise(VectorOperators.XOR, v286);
-                IntVector v287 = (v279_hv);
-                IntVector v288 = v287.lanewise(VectorOperators.ASHR, 16);
-                IntVector v289 = (v288);
-                v279_hv = v279_hv.lanewise(VectorOperators.XOR, v289);
-                IntVector v290_hv = v279_hv;
-                boolean v291 = v263 >= v260;
-                l22: {
-                  if (!v291) break l22;
-                  if (1==1) break l16;
+                ByteVector v298 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask, v293_c);
+                ByteVector v299 = v288.and(v298);
+                IntVector v300_hv = v299.reinterpretAsInts();
+                LongVector v301 = v300_hv.reinterpretAsLongs();
+                long v302 = v301.lane(1);
+                LongVector v303 = (LongVector) LongVector.SPECIES_128.broadcast(v302);
+                IntVector v304 = v303.reinterpretAsInts();
+                v300_hv = v300_hv.lanewise(VectorOperators.XOR, v304);
+                LongVector v305 = v300_hv.reinterpretAsLongs();
+                LongVector v306 = v305.lanewise(VectorOperators.LSHR, 32);
+                IntVector v307 = v306.reinterpretAsInts();
+                v300_hv = v300_hv.lanewise(VectorOperators.XOR, v307);
+                IntVector v308 = (v300_hv);
+                IntVector v309 = v308.lanewise(VectorOperators.ASHR, 16);
+                IntVector v310 = (v309);
+                v300_hv = v300_hv.lanewise(VectorOperators.XOR, v310);
+                IntVector v311_hv = v300_hv;
+                boolean v312 = v284 >= v206;
+                l26: {
+                  if (!v312) break l26;
+                  if (1==1) break l20;
                 }
-                int v292_hash = v290_hv.lane(0);
-                int v293 = v292_hash & v2_hash_mask;
-                int v294_idx = (int) v293;
-                IntVector v295 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v294_idx);
-                IntVector v296 = (IntVector) IntVector.SPECIES_128.broadcast(v292_hash);
-                VectorMask<?> v297 = v296.compare(VectorOperators.EQ, v295);
-                long v298 = v297.toLong();
-                byte v299_m = (byte) v298;
-                boolean v300 = v299_m == (byte)0;
-                l24: {
-                  l23: {
-                    if (!v300) break l23;
-                    int v301 = v181_bufS + v263;
-                    int v302 = v1_bufdata[v301];
-                    v176_failbuf[v178_failposC] = v302;
-                    int v304 = v178_failposC + 1;
-                    int v305 = v263 * 4;
-                    int v306 = v305 + 2;
-                    short v307 = v175_temp_buf[v306];
-                    int v308 = (int) v307;
-                    v176_failbuf[v304] = v308;
-                    v178_failposC = v178_failposC + 2;
-                    if (1==1) break l24;
-                  }
-                  int v310 = Integer.numberOfTrailingZeros(v299_m);
-                  v294_idx = v294_idx + v310;
-                  int v311 = v294_idx * 16;
-                  ByteVector v312_exp = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v311);
-                  boolean v313 = v312_exp.equals(v278);
-                  boolean v314 = !(v313);
-                  l26: {
-                    l25: {
-                      if (!v314) break l25;
-                      int v315 = v181_bufS + v263;
-                      int v316 = v1_bufdata[v315];
-                      v176_failbuf[v178_failposC] = v316;
-                      int v318 = v178_failposC + 1;
-                      int v319 = v263 * 4;
-                      int v320 = v319 + 2;
-                      short v321 = v175_temp_buf[v320];
-                      int v322 = (int) v321;
-                      v176_failbuf[v318] = v322;
-                      v178_failposC = v178_failposC + 2;
-                      if (1==1) break l26;
+                int v313_hash = v311_hv.lane(0);
+                int v314 = v313_hash & v2_hash_mask;
+                int v315_idx = (int) v314;
+                IntVector v316 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v315_idx);
+                IntVector v317 = (IntVector) IntVector.SPECIES_128.broadcast(v313_hash);
+                VectorMask<?> v318 = v317.compare(VectorOperators.EQ, v316);
+                long v319 = v318.toLong();
+                byte v320_m = (byte) v319;
+                boolean v321 = v320_m == (byte)0;
+                l29: {
+                  l27: {
+                    if (!v321) break l27;
+                    boolean v322 = v284 >= v206;
+                    l28: {
+                      if (!v322) break l28;
+                      if (1==1) break l20;
                     }
-                    int v324_dataoff = v294_idx * 4;
-                    int v325 = v263 * 4;
-                    int v326 = v325 + 2;
-                    short v327 = v175_temp_buf[v326];
-                    long v328_temp = (long) v327;
-                    int v329 = v324_dataoff + 2;
-                    long v330 = v5_map_data[v329];
-                    long v331 = Math.min(v330, v328_temp);
-                    v5_map_data[v329] = v331;
-                    int v333 = v324_dataoff + 3;
-                    long v334 = v5_map_data[v333];
-                    long v335 = Math.max(v334, v328_temp);
-                    v5_map_data[v333] = v335;
-                    long v337 = v5_map_data[v324_dataoff];
-                    long v338 = v337 + v328_temp;
-                    v5_map_data[v324_dataoff] = v338;
-                    int v340 = v324_dataoff + 1;
-                    long v341 = v5_map_data[v340];
-                    long v342 = v341 + 1L;
-                    v5_map_data[v340] = v342;
+                    int v323 = v202_bufS + v284;
+                    int v324 = v1_bufdata[v323];
+                    v197_failbuf[v199_failposC] = v324;
+                    int v326 = v199_failposC + 1;
+                    int v327 = v284 * 4;
+                    int v328 = v327 + 2;
+                    short v329 = v196_temp_buf[v328];
+                    int v330 = (int) v329;
+                    v197_failbuf[v326] = v330;
+                    v199_failposC = v199_failposC + 2;
+                    if (1==1) break l29;
+                  }
+                  int v332 = Integer.numberOfTrailingZeros(v320_m);
+                  v315_idx = v315_idx + v332;
+                  int v333 = v315_idx * 16;
+                  ByteVector v334_exp = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v333);
+                  boolean v335 = v334_exp.equals(v299);
+                  boolean v336 = !(v335);
+                  l32: {
+                    l30: {
+                      if (!v336) break l30;
+                      boolean v337 = v284 >= v206;
+                      l31: {
+                        if (!v337) break l31;
+                        if (1==1) break l20;
+                      }
+                      int v338 = v202_bufS + v284;
+                      int v339 = v1_bufdata[v338];
+                      v197_failbuf[v199_failposC] = v339;
+                      int v341 = v199_failposC + 1;
+                      int v342 = v284 * 4;
+                      int v343 = v342 + 2;
+                      short v344 = v196_temp_buf[v343];
+                      int v345 = (int) v344;
+                      v197_failbuf[v341] = v345;
+                      v199_failposC = v199_failposC + 2;
+                      if (1==1) break l32;
+                    }
+                    int v347_dataoff = v315_idx * 4;
+                    int v348 = v284 * 4;
+                    int v349 = v348 + 2;
+                    short v350 = v196_temp_buf[v349];
+                    long v351_temp = (long) v350;
+                    int v352 = v347_dataoff + 2;
+                    long v353 = v5_map_data[v352];
+                    long v354 = Math.min(v353, v351_temp);
+                    v5_map_data[v352] = v354;
+                    int v356 = v347_dataoff + 3;
+                    long v357 = v5_map_data[v356];
+                    long v358 = Math.max(v357, v351_temp);
+                    v5_map_data[v356] = v358;
+                    long v360 = v5_map_data[v347_dataoff];
+                    long v361 = v360 + v351_temp;
+                    v5_map_data[v347_dataoff] = v361;
+                    int v363 = v347_dataoff + 1;
+                    long v364 = v5_map_data[v363];
+                    long v365 = v364 + 1L;
+                    v5_map_data[v363] = v365;
                   }
                 }
-                v261_i = v261_i + 1;
-                if (1==1) continue l19;
+                v282_i = v282_i + 1;
+                if (1==1) continue l23;
                 break;
               }
             }
-            v181_bufS = v181_bufS + 4;
-            if (1==1) continue l17;
+            v202_bufS = v202_bufS + 4;
+            if (1==1) continue l21;
             break;
           }
         }
       }
-      v179_i = v179_i + 1;
-      if (1==1) continue l14;
+      v200_i = v200_i + 1;
+      if (1==1) continue l18;
       break;
     }
   }
-  l28: {
-    l27: while(true) {
-      boolean v344 = v177_failposS < v178_failposC;
-      if (!v344) break l28;
-      int v345 = v176_failbuf[v177_failposS];
-      int v346 = v177_failposS + 1;
-      int v347 = v176_failbuf[v346];
-      v177_failposS = v177_failposS + 2;
-      int v348 = v345 - 16;
-      ByteVector v349 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v348);
-      ByteVector v350 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
-      VectorMask<?> v351 = v349.compare(VectorOperators.EQ, v350);
-      long v352 = v351.toLong();
-      short v353_m = (short) v352;
-      boolean v354 = v353_m == (short)0;
-      l31: {
-        l29: {
-          if (!v354) break l29;
-          int v355_start = v345;
-          l30: while(true) {
-            v355_start = v355_start - 16;
-            int v356 = v355_start - 16;
-            ByteVector v357 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v356);
-            ByteVector v358 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
-            VectorMask<?> v359 = v357.compare(VectorOperators.EQ, v358);
-            long v360 = v359.toLong();
-            v353_m = (short) v360;
-            boolean v361 = v353_m == (short)0;
-            if (v361) continue l30;
+  l34: {
+    l33: while(true) {
+      boolean v367 = v198_failposS < v199_failposC;
+      if (!v367) break l34;
+      int v368 = v197_failbuf[v198_failposS];
+      int v369 = v198_failposS + 1;
+      int v370 = v197_failbuf[v369];
+      v198_failposS = v198_failposS + 2;
+      int v371 = v368 - 16;
+      ByteVector v372 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v371);
+      ByteVector v373 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
+      VectorMask<?> v374 = v372.compare(VectorOperators.EQ, v373);
+      long v375 = v374.toLong();
+      short v376_m = (short) v375;
+      boolean v377 = v376_m == (short)0;
+      l37: {
+        l35: {
+          if (!v377) break l35;
+          int v378_start = v368;
+          l36: while(true) {
+            v378_start = v378_start - 16;
+            int v379 = v378_start - 16;
+            ByteVector v380 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v379);
+            ByteVector v381 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
+            VectorMask<?> v382 = v380.compare(VectorOperators.EQ, v381);
+            long v383 = v382.toLong();
+            v376_m = (short) v383;
+            boolean v384 = v376_m == (short)0;
+            if (v384) continue l36;
             break;
           }
-          int v362 = (int) v353_m;
-          int v363 = v362 & 65535;
-          int v364 = Integer.numberOfLeadingZeros(v363);
-          int v365 = v364 - 16;
-          int v366 = v355_start - v365;
-          main.Main.failed_long(v0_ident, v366, v345, v347);
-          if (1==1) break l31;
+          int v385 = (int) v376_m;
+          int v386 = v385 & 65535;
+          int v387 = Integer.numberOfLeadingZeros(v386);
+          int v388 = v387 - 16;
+          int v389 = v378_start - v388;
+          main.Main.failed_long(v0_ident, v389, v368, v370);
+          if (1==1) break l37;
         }
-        int v368 = (int) v353_m;
-        int v369 = v368 & 65535;
-        int v370 = Integer.numberOfLeadingZeros(v369);
-        int v371_c = v370 - 16;
-        int v372 = v345 - v371_c;
-        ByteVector v373 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask, v371_c);
-        ByteVector v374 = v349.and(v373);
-        IntVector v375_hv = v374.reinterpretAsInts();
-        LongVector v376 = v375_hv.reinterpretAsLongs();
-        long v377 = v376.lane(1);
-        LongVector v378 = (LongVector) LongVector.SPECIES_128.broadcast(v377);
-        IntVector v379 = v378.reinterpretAsInts();
-        v375_hv = v375_hv.lanewise(VectorOperators.XOR, v379);
-        LongVector v380 = v375_hv.reinterpretAsLongs();
-        LongVector v381 = v380.lanewise(VectorOperators.LSHR, 32);
-        IntVector v382 = v381.reinterpretAsInts();
-        v375_hv = v375_hv.lanewise(VectorOperators.XOR, v382);
-        IntVector v383 = (v375_hv);
-        IntVector v384 = v383.lanewise(VectorOperators.ASHR, 16);
-        IntVector v385 = (v384);
-        v375_hv = v375_hv.lanewise(VectorOperators.XOR, v385);
-        int v386 = v375_hv.lane(0);
-        main.Main.failed_short(v0_ident, v372, v345, v347, v386);
+        int v391 = (int) v376_m;
+        int v392 = v391 & 65535;
+        int v393 = Integer.numberOfLeadingZeros(v392);
+        int v394_c = v393 - 16;
+        int v395 = v368 - v394_c;
+        ByteVector v396 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask, v394_c);
+        ByteVector v397 = v372.and(v396);
+        IntVector v398_hv = v397.reinterpretAsInts();
+        LongVector v399 = v398_hv.reinterpretAsLongs();
+        long v400 = v399.lane(1);
+        LongVector v401 = (LongVector) LongVector.SPECIES_128.broadcast(v400);
+        IntVector v402 = v401.reinterpretAsInts();
+        v398_hv = v398_hv.lanewise(VectorOperators.XOR, v402);
+        LongVector v403 = v398_hv.reinterpretAsLongs();
+        LongVector v404 = v403.lanewise(VectorOperators.LSHR, 32);
+        IntVector v405 = v404.reinterpretAsInts();
+        v398_hv = v398_hv.lanewise(VectorOperators.XOR, v405);
+        IntVector v406 = (v398_hv);
+        IntVector v407 = v406.lanewise(VectorOperators.ASHR, 16);
+        IntVector v408 = (v407);
+        v398_hv = v398_hv.lanewise(VectorOperators.XOR, v408);
+        int v409 = v398_hv.lane(0);
+        main.Main.failed_short(v0_ident, v395, v368, v370, v409);
       }
-      if (1==1) continue l27;
+      if (1==1) continue l33;
       break;
     }
   }
