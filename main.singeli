@@ -45,7 +45,13 @@ extend ({...f}=>each{vecfn,f}){
   __min, __max, __subs, __adds,
 }
 local def extend retypeShift{op} = {
-  def op{C & retype_cond{C}}{a:V, b & knum{b}} = V~~op{retype_type{C,V}~~a, b}
+  def op{C & retype_cond{C}} = {
+    def c{T} = retype_type{C, T}
+    def me{a:V,    b:c{V}}   = V~~op{c{V}~~a, b}
+    def me{a:c{V}, b:V   }   = V~~op{a, c{V}~~b}
+    def me{a:V,    b:V   }   = V~~op{c{V}~~a, c{V}~~b}
+    def me{a:V, b & knum{b}} = V~~op{c{V}~~a, b}
+  }
 }
 extend retypeShift{__shr}
 extend retypeShift{__shl}
@@ -197,15 +203,15 @@ fn core_1brc(
         else __subs{u8}{v, 48}
       }
       
-      def {num_off, each16} = if (not is_java and width{VI16}==256) {
+      def {num_off, each16} = if (not is_java) {
         # nums     off aligned
         # 01234567     01234567
         # 8.5↩ABCD 0   ^^^^^8.5
         # 12.8↩ABC 8   ^^^^12.8
         # -2.7↩ABC 8   ^^^^-2.7
         # -32.1↩AB 16  ^^^-32.1
-        off:= VI8~~(v_eq{nums, 46} >>{i32} (24-1 - 3)) &{u64} (3<<3) # offset of '.', shifted left by 3 (i.e. '1.1'→0, '10.2'→8, '-1.2'→8, '-12.3'→16)
-        nums = VI8~~(u64~*nums << (((5<<3) - u64~*off)))
+        off:= (v_eq{VI8}{nums, 46} >>{i32} (24-1 - 3))  &{u64}  (3<<3) # offset of '.', shifted left by 3 (i.e. '1.1'→0, '10.2'→8, '-1.2'→8, '-12.3'→16)
+        nums = nums <<{u64} ((5<<3) -{u64} off)
         
         aligned:= to_digits{nums}
         t16:= madd{u8~*aligned, cycle_make{VI8,  10,1,0,1}} # TODO perhaps a single _mm256_mul_epi32 can work?
