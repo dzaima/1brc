@@ -6,8 +6,9 @@ IR_PASS = bqn -e '•Out¨ (•Import"$(SINGELI_PATH)/ir.bqn").Restructure •FL
 
 java-build: classes/main/Main.class
 
-# -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0
-JAVA_RUN = java --add-modules=jdk.incubator.vector --enable-preview -cp classes main.Main
+JAVA_RUN = java --add-modules=jdk.incubator.vector --enable-preview
+# JAVA_RUN+= -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0
+JAVA_RUN+= -cp classes main.Main
 
 run: java-build
 	@$(JAVA_RUN) 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"

@@ -285,6 +285,29 @@ fn core_1brc(
           tup{halves{total}, total}
         }
       }
+      def get_idxs{hv:[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
+        idxv:= hv & hash_mask
+        idxs:= each{{i} => cast_i{ux, extract{idxv,i}}, range{hashn} * 4}
+        hashes:= pair{each{{idx} => load{HASHV, map_hash, idx}, idxs}}
+        m:= homMask{hashes == shuf{VHX, hv, 0,0,0,0, 4,4,4,4}}
+        m2:= m & (m-1)
+        if (rare{m2 == 0}) {
+          def {i0,i1} = idxs
+          def c = ctz{m}
+          idxs = tup{i0+c, i1+c-vcount{HASHV}}
+          idxs = each{{i} => i & cast_i{ux,hash_mask}, idxs} # make sure bad results are still valid
+        } else {
+          idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
+        }
+        idxs
+      }
+      def get_idxs{hv:[4]HASH} = {
+        hash:= extract{hv, 0}
+        idx:= cast_i{ux, hash&hash_mask}
+        m:= homMask{hash == load{HASHV, map_hash, idx}}
+        tup{idx + ctz{m}}
+      }
+      def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
       def to_fail{ij} = { # didn't find ij'th record in map
@@ -308,42 +331,37 @@ fn core_1brc(
         upd{dt_num, {v} => v + 1}
       }
       
-      
+      def hiter = proc_bulk/hashn
+      def ibs = range{hiter}*hashn
+      def {partss, totals} = flip{each{maskload, ibs}}
+      def hvs = each{hash_vec, totals}
+      def idxs = join{each{get_idxs, hvs}}
+      def exps = each{get_exp, idxs}
       
       ########## NUMBER PARSING ##########
-      idxs:= load{VIX, bufdata, bufS}
-      nums:= VNI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
+      num_idxs:= load{VIX, bufdata, bufS}
+      nums:= VNI8~~gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
       def num_off = parse_nums{temp_buf, nums}
       
-      ########## HASHING ##########
+      each{{ij, idx, got, exp} => {
+        if (likely{got === exp}) update{ij, idx}
+        else to_fail{ij}
+      }, range{proc_bulk}, idxs, join{partss}, exps}
       
-      @for (i to proc_bulk/hashn) {
+      ########## OLD HASHING ##########
+      if (0) @for (i to hiter) {
         def ib = i*hashn
+        def ijs = each{{j} => ib+j, range{hashn}}
         
         # load names
-        def {parts, total} = maskload{ib}
-        
-        # hash
-        hv:VHX = hash_vec{total}
+        def {parts, total} = maskload{ib} # load names & mask until newline
+        hv:VHX = hash_vec{total} # hash
+        idxs:= get_idxs{hv} # get map indices from the hashes
         
         if (hashn==2 and not is_java) {
-          hx:= shuf{VHX, hv, 0,0,0,0, 4,4,4,4}
-          idxv:= hv & hash_mask
-          idxs:= each{{i} => promote{ux, extract{idxv,i}}, range{hashn} * 4}
-          hashes:= pair{each{{idx} => load{HASHV, map_hash, idx}, idxs}}
-          m:= homMask{hashes == hx}
-          m2:= m & (m-1)
-          if (rare{m2 == 0}) {
-            def {i0,i1} = idxs
-            def c = ctz{m}
-            idxs = tup{i0+c, i1+c-vcount{HASHV}}
-            idxs = each{{i} => i & promote{ux,hash_mask}, idxs} # make sure bad results are still valid
-          } else {
-            idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
-          }
           each{{j, idx} => {
             def ij = ib + j
-            exp:= load{VX, map_exp, idx*exp_bulk}
+            exp:= get_exp{idx}
             if (exp !== select{parts,j}) {
               to_fail{ij}
             } else {

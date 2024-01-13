@@ -106,7 +106,7 @@ if (hasarch{'AVX2'}) {
   def object_arr = static_arr
   def function_arr = static_arr
   
-  def full_eq{x:T, y:T & width{T}==128} = homMask{re_el{i8,x} == re_el{i8,y}} == ((1<<vcount{T})-1)
+  def full_eq{x:T, y:T & vece{T}} = homMask{re_el{i8,x} == re_el{i8,y}} == ((1<<vcount{T})-1)
   def full_ne{x:T, y:T} = ~(x===y)
   def v_eq{a:T, b:T} = a==b
   def v_ne{a:T, b:T} = a!=b
