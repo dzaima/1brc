@@ -276,6 +276,21 @@ fn core_1brc(
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
         failposC+= 2
       }
+      def update{ij, idx} = {
+        dataoff:= idx*4
+        temp:= promote{DATA, get_temp{ij}}
+        def upd{k, G} = {
+          def p = tup{map_data, dataoff+k}
+          store{...p, G{load{...p}}}
+        }
+        if (is_java) upd{dt_min, {v} => __min{v, temp}}
+        else         upd{dt_min, {v} => __max{v, -temp}}
+        upd{dt_max, {v} => __max{v, temp}}
+        upd{dt_sum, {v} => v + temp}
+        upd{dt_num, {v} => v + 1}
+      }
+      
+      
       
       @for (i to proc_bulk/hashn) {
         def ib = i*hashn
@@ -298,20 +313,6 @@ fn core_1brc(
         # hash
         def VHX = HASH~*VVX
         hv:VHX = hash_vec{total}
-        
-        def update{ij, idx} = {
-          dataoff:= idx*4
-          temp:= promote{DATA, get_temp{ij}}
-          def upd{k, G} = {
-            def p = tup{map_data, dataoff+k}
-            store{...p, G{load{...p}}}
-          }
-          if (is_java) upd{dt_min, {v} => __min{v, temp}}
-          else         upd{dt_min, {v} => __max{v, -temp}}
-          upd{dt_max, {v} => __max{v, temp}}
-          upd{dt_sum, {v} => v + temp}
-          upd{dt_num, {v} => v + 1}
-        }
         
         if (hashn==2 and not is_java) {
           hx:= shuf{VHX, hv, 0,0,0,0, 4,4,4,4}
