@@ -185,6 +185,7 @@ def parse_nums{buf:*i16, nums:NV8} = {
 }
 
 
+
 def dt_sum = 0
 def dt_num = 1
 def dt_min = 2
@@ -208,15 +209,15 @@ fn core_1brc(
   
   def ri = range{interleaved}
   def bufstart{i} = i * bufmax2
-  def bufcs = each{{i} => { pos:ux = bufstart{i} }, ri}
+  def bufcs = each{new{ux}, each{bufstart, ri}}
   bufEnds:*ux = object_arr{ux, interleaved}
   
   ########## SEMICOLON SEARCH ##########
-  def inpcs = each{{i} => { pos:ux = inpOff + i*bulk }, ri}
+  def inpcs = each{{i} => new{inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
     def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
     
-    def ms = each{{x} => {m:=x}, ms0}
+    def ms = each{new, ms0}
     def adv_mask{bufc, inpc, m, j, m0tmp} = {
       m2:= m & (m-1)
       store{bufdata, bufc+j, inpc+ctz{m}} # TODO move to_store to a vectorized add at the end?

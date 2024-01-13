@@ -4,6 +4,9 @@ include 'util/tup'
 include 'util/kind'
 
 # general things
+oper ** broadcast infix right 55
+oper ~~ reinterpret infix right 55
+oper &~ andnot infix none 35
 def isprim{T} = typekind{T}=='primitive'
 def intty{T} = if (isprim{T} and quality{T}!='f') 1 else 0
 def intany{x} = knum{x}
@@ -14,9 +17,8 @@ def fail{...x} = { show{...x}; '!'{} }
 def assert{x} = fail{x}
 def assert{x==1} = 1
 def broadcast{n, v & knum{n}} = copy{n, v}
-oper ** broadcast infix right 55
-oper ~~ reinterpret infix right 55
-oper &~ andnot infix none 35
+def new{v:T} = { new:T = v }
+def new{T & ktyp{T}}{v} = new{T~~v}
 local def indexof{vs, x} = { def {r} = indices{each{__eq{x,.}, vs}}; r }
 
 def truncBits{n, v & n<=8}  = cast_i{u8, v}
