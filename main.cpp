@@ -164,7 +164,8 @@ void basic_core(ux start, ux end) {
 }
 
 static std::string fmt(double x) {
-  int i = round(x);
+  int i = lround(x);
+  if (x-i == 0.5 && i<0) i++; // emulate a round-to-positive-infinity, i.e. what Java's Math.round does, for ease of testing
   char buf[6]; // "-10.1\0"
   char* c = buf;
   if (i<0) { *c++='-'; i = -i; }
