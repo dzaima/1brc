@@ -274,8 +274,7 @@ fn core_1brc(
       ########## DEFS ##########
       def left = bufE - bufS
       
-      # hashes two names at a time on native; on Java that's slower :/
-      def hashn = if (is_java) 1 else 1
+      def hashn = 1 # if (is_java) 1 else 2
       def VVX = [hashn * exp_bulk]i8
       def VHX = HASH~*VVX
       
