@@ -138,10 +138,15 @@ def parse_nums{buf:*i16, nums:NV8} = {
       r+= (aligned16 * 10) >>{u16} 8
       r+= (aligned16 >>{u32} 24)
       tup{2, VNI16~~r}
-    } else {
-      t16:= madd{u8~*aligned, cycle_make{VNI8,  10,1,0,1}} # TODO perhaps a single _mm256_mul_epi32 can work?
+    } else if (0) {
+      t16:= madd{u8~*aligned, cycle_make{VNI8,  10,1,0,1}}
       t32:= madd{t16,         cycle_make{VNI16, 10,1}}
       tup{2, VNI16~~t32}
+    } else {
+      def magic = 1 + (10<<16) + (100<<24) # https://curiouscoding.nl/posts/1brc/#parsing-using-a-single-multiplication-does-work-after-all-1-dot-48s
+      def mullo{a, b} = emit{[4]i64, '_mm256_mul_epi32', a, b}
+      r:= mullo{aligned >>{u64} 32, [4]i64**magic} >>{u64} 24 &{u64} 1023
+      tup{0, VNI16~~r}
     }
   } else {
     # nums     off1     off2     aligned16
