@@ -68,18 +68,20 @@ EmitFn ← { 𝕊:
   fnDefs ← ⟨⟩ ⋄ Add ← {mainLns∾↩<𝕩 ⋄ @}
   beginLns ← ⟨⟩ ⋄ AddBegin ← {beginLns∾↩<𝕩 ⋄ @}
   
+  switch ← ⊑"lbl"<⊸∊ ⊑¨𝕩
+  codeIndent ← (2 + switch×2)⥊' '
+  
   # find variables local to this label block
   lnum ← +`("lbl"≡⊑)¨ 𝕩
   vdef ← (("new"⊸≡∨"mut"⊸≡)⊑)¨ 𝕩
   names ← 1⊑¨vdef/𝕩
   blocal ← •HashMap⟜(1¨) {((1=+´∘∊)¨ (⊐𝕨)⊔𝕩) / ⍷𝕨}´ (∊⟜names ∾𝕩)⊸/¨ ⟨∾𝕩, (≠¨𝕩)/lnum⟩
   
-  codeIndent ← "    "
-  
   _makeIf ← { # cond "name[FT]?" _makeIf "body;"
     cond ← 𝕨
     ∾⟨codeIndent, "if (", {'F': "!"∾cond; 'T': cond; "1==1"}¯1⊑𝕗, ") ", 𝕩⟩
   }
+  
   
   prevGoes ← 0
   {𝕊ps:{
@@ -152,7 +154,7 @@ EmitFn ← { 𝕊:
   
   Add⍟(¬prevGoes) codeIndent ∾ "return;"
   
-  ⟨fnDefs, beginLns, mainLns⟩
+  ⟨switch, fnDefs, beginLns, mainLns⟩
 }
 
 resTop ← ⟨⟩
@@ -174,16 +176,19 @@ fnLine ← @
       fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", {𝕩↓˜1+⊑𝕩⊐'_'} 1⊑ps, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
       ;
     "endFn":
-      defs‿begin‿main ← EmitFn fnIR
+      switch‿defs‿begin‿main ← EmitFn fnIR
       
       AddGlobal fnLine
       resGlobal∾↩ begin
-      AddGlobal "  int switch_num = 0;"
-      AddGlobal "  "∾' 'Join defs
-      AddGlobal "  switch_loop: while(true) switch(switch_num) {"
-      AddGlobal ∾⟨caseIndent, "case 0:"⟩
+      { 𝕊:
+        AddGlobal "  int switch_num = 0;"
+        AddGlobal "  "∾' 'Join defs
+        AddGlobal "  switch_loop: while(true) switch(switch_num) {"
+        AddGlobal ∾⟨caseIndent, "case 0:"⟩
+      }⍟⊢ switch
       resGlobal∾↩ main
-      AddGlobal¨ "  }"‿"}"
+      AddGlobal⍟switch "  }"
+      AddGlobal "}"
       
       fnIR↩@
       ;
