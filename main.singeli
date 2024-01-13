@@ -3,7 +3,7 @@ include 'singeli-java/base'
 def bulk = 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
 def interleaved = 4 # number of semicolon searches to interleave
-def bufmax = 1000 # TODO 2^n-proc_bulk
+def bufmax = 1000
 def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
 def HASHV = [4]HASH # buckets to search
