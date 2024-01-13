@@ -307,6 +307,7 @@ fn core_1brc(
             def {i0,i1} = idxs
             def c = ctz{m}
             idxs = tup{i0+c, i1+c-vcount{HASHV}}
+            idxs = each{{i} => i & promote{ux,hash_mask}, idxs} # make sure bad results are still valid
           } else {
             idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
           }

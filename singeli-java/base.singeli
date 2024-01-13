@@ -92,11 +92,11 @@ if (hasarch{'AVX2'}) {
   def popc{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_popcountll', x}
   def popc{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_popcount', to_u32{x}}
   
-  def ctz{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_ctzll', x}
-  def ctz{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_ctz', x}
+  def ctz{x:T & isint{T} & width{T}==64} = emit{ux, '_tzcnt_u64', x}
+  def ctz{x:T & isint{T} & width{T}<=32} = emit{ux, '_tzcnt_u32', x}
   
-  def clz{n==0, x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_clzll', x}
-  def clz{n==0, x:T & isint{T} & width{T}==32} = emit{ux, '__builtin_clz', x}
+  def clz{n==0, x:T & isint{T} & width{T}==64} = emit{ux, '_lzcnt_u64', x}
+  def clz{n==0, x:T & isint{T} & width{T}==32} = emit{ux, '_lzcnt_u32', x}
   
   def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
   def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}
