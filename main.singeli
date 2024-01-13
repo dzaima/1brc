@@ -86,7 +86,7 @@ export{'hash_1brc', hash_1brc}
 
 tail_mask:*i8 = merge{exp_bulk**0, exp_bulk ** -1}
 
-def mask_newline{v:T & eltype{T}==i8} = if (width{T}==256) {
+def mask_newline{v:T & T==[32]i8} = {
   def V64 = u64~*T
   a:= V64~~v_eq{v, 10}
   l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
@@ -101,7 +101,9 @@ def mask_newline{v:T & eltype{T}==i8} = if (width{T}==256) {
     a = tree_fold{|, each{{c}=>a>>c, 4 + 16*range{4}}}
     v & T~~v_eq{T~~a, 0}
   }
-} else {
+}
+# def mask_newline{v:T & T==[32]i8} = pair{each{mask_newline, halves{v}}}
+def mask_newline{v:T & T==[16]i8} = {
   mc:= homMask{v == 10}
   c:ux = exp_bulk
   if (likely{mc!=0}) c = clz{exp_bulk, mc}
@@ -268,7 +270,7 @@ fn core_1brc(
       def left = bufE - bufS
       
       # hashes two names at a time on native; on Java that's slower :/
-      def hashn = if (is_java) 1 else 2
+      def hashn = if (is_java) 1 else 1
       def VVX = [hashn * exp_bulk]i8
       def VHX = HASH~*VVX
       
