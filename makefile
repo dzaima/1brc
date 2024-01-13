@@ -6,8 +6,13 @@ IR_PASS = bqn -e '•Out¨ (•Import"$(SINGELI_PATH)/ir.bqn").Restructure •FL
 
 java-build: classes/main/Main.class
 
+JAVA_RUN = java --add-modules=jdk.incubator.vector --enable-preview -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0 -cp classes main.Main
+
 run: java-build
-	@java --add-modules=jdk.incubator.vector --enable-preview -cp classes main.Main 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
+	@$(JAVA_RUN) 2> >(grep -v 'WARNING: Using incubator modules: jdk.incubator.vector' >&2) "$$file"
+
+run-cmd:
+	@echo $(JAVA_RUN)
 
 f = -O3
 obj/gen.o: gen.c header.h
@@ -37,7 +42,7 @@ gen.c: $(GEN_C_DEPS)
 java-ir:
 	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS)
 
-.PHONY: java-build java-ir run
+.PHONY: java-build java-ir run run-cmd
 
 clean:
 	rm -rf obj/ classes/
