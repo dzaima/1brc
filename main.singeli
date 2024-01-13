@@ -266,15 +266,35 @@ fn core_1brc(
     while (bufS < bufE) { # proc_bulk records per iteration
       ########## DEFS ##########
       def left = bufE - bufS
+      
+      # hashes two names at a time on native; on Java that's slower :/
+      def hashn = if (is_java) 1 else 2
+      def VVX = [hashn * exp_bulk]i8
+      def VHX = HASH~*VVX
+      
+      def maskload{ib} = { # load & mask-to-newline hashn names; returns tup{tup{...each_individual_name}, merged_vector_of_them}
+        def for_vs{G} = @for_const(j to hashn) {
+          off:= load{bufdata, bufS + ib + j}
+          G{load{VX, inp, off-exp_bulk}}
+        }
+        if (is_java or hashn==1) {
+          def parts = for_vs{mask_newline}
+          tup{parts, pair{parts}}
+        } else {
+          def total = mask_newline{pair{for_vs{{x}=>x}}}
+          tup{halves{total}, total}
+        }
+      }
+      
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
-      def to_fail{ij} = {
+      def to_fail{ij} = { # didn't find ij'th record in map
         if (rare{ij >= left}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
         failposC+= 2
       }
-      def update{ij, idx} = {
+      def update{ij, idx} = { # found ij'th record at map index idx
         dataoff:= idx*4
         temp:= promote{DATA, get_temp{ij}}
         def upd{k, G} = {
@@ -297,30 +317,13 @@ fn core_1brc(
       
       ########## HASHING ##########
       
-      # hashes two names at a time on native; on Java that's slower :/
-      def hashn = if (is_java) 1 else 2
-      def VVX = [hashn * exp_bulk]i8
-      
       @for (i to proc_bulk/hashn) {
         def ib = i*hashn
         
         # load names
-        def {parts, total} = {
-          def for_vs{G} = @for_const(j to hashn) {
-            off:= load{bufdata, bufS + ib + j}
-            G{load{VX, inp, off-exp_bulk}}
-          }
-          if (is_java or hashn==1) {
-            def parts = for_vs{mask_newline}
-            tup{parts, pair{parts}}
-          } else {
-            def total = mask_newline{pair{for_vs{{x}=>x}}}
-            tup{halves{total}, total}
-          }
-        }
+        def {parts, total} = maskload{ib}
         
         # hash
-        def VHX = HASH~*VVX
         hv:VHX = hash_vec{total}
         
         if (hashn==2 and not is_java) {
