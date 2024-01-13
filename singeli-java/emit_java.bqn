@@ -93,7 +93,7 @@ EmitFn ← { 𝕊:
       
       {𝕊: fnDefs∾↩< ∾⟨retty, ' ', name, '=', {"u1":"false"; ⊑(⊑𝕩)∊"iuf"?"0";"null"}3⊑ps, ';'⟩}⍟⊢ (¬void ∨ ¬new) ∧ ¬local
       
-      atBegin ← "new"‿"emit"‿"'^atbegin'" ≡ (1‿0‿1‿0‿1↑˜≠)⊸/ ps
+      atBegin ← "emit"‿"'^atbegin'" ≡ (0‿0‿1‿0‿1↑˜≠)⊸/ ps
       {atBegin? ps (4⊸↑∾5⊸↓)↩; @}
       
       ArrInit ← {∾⟨"new ", retty, "{", ','Join Arg¨ 𝕩, "}"⟩}

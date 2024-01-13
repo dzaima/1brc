@@ -596,6 +596,10 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
   }
 }
 public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_ai64) {
+  VectorShuffle<Integer> v9 = IntVector.SPECIES_256.shuffleFromValues(0, 0, 0, 0, 4, 4, 4, 4);
+  VectorShuffle<Integer> v12 = IntVector.SPECIES_256.shuffleFromValues(0, 0, 0, 0, 4, 4, 4, 4);
+  VectorShuffle<Integer> v15 = IntVector.SPECIES_256.shuffleFromValues(0, 0, 0, 0, 4, 4, 4, 4);
+  VectorShuffle<Integer> v18 = IntVector.SPECIES_256.shuffleFromValues(0, 0, 0, 0, 4, 4, 4, 4);
   int switch_num = 0;
   
   switch_loop: while(true) switch(switch_num) {
@@ -605,29 +609,21 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
       l0: while(true) {
         boolean v5 = v4_i < 1000;
         if (!v5) break l1;
-        int v6 = v4_i * 32;
-        ByteVector v7_v = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_ai8, v6);
-        ByteVector v8 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
-        v7_v = v7_v.add(v8);
-        ByteVector v9 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)1);
-        v7_v = v7_v.add(v9);
-        ByteVector v10 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)2);
-        v7_v = v7_v.add(v10);
-        ByteVector v11 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
-        v7_v = v7_v.add(v11);
-        ByteVector v12 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)1);
-        v7_v = v7_v.add(v12);
-        ByteVector v13 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)2);
-        v7_v = v7_v.add(v13);
-        ByteVector v14 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
-        v7_v = v7_v.add(v14);
-        ByteVector v15 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)1);
-        v7_v = v7_v.add(v15);
-        ByteVector v16 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)2);
-        v7_v = v7_v.add(v16);
-        ByteVector v17 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)0);
-        v7_v = v7_v.add(v17);
-        v7_v.intoArray(v0_ai8, v6);
+        int v6 = v4_i * 8;
+        IntVector v7_v = (IntVector) IntVector.SPECIES_256.fromArray(v2_ai32, v6);
+        IntVector v8 = (v7_v);
+        IntVector v10 = v8.rearrange(v9);
+        v7_v = (v10);
+        IntVector v11 = (v7_v);
+        IntVector v13 = v11.rearrange(v12);
+        v7_v = (v13);
+        IntVector v14 = (v7_v);
+        IntVector v16 = v14.rearrange(v15);
+        v7_v = (v16);
+        IntVector v17 = (v7_v);
+        IntVector v19 = v17.rearrange(v18);
+        v7_v = (v19);
+        v7_v.intoArray(v2_ai32, v6);
         v4_i = v4_i + 1;
         if (1==1) continue l0;
         break;

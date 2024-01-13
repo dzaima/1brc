@@ -242,7 +242,6 @@ fn core_1brc(
   
   
   ########## PROCESSING ##########
-  # temperature parsing stuff
   temp_buf:*i16 = object_arr{i16, vcount{VNI16}**0}
   # search & update stuff
   def VX = [exp_bulk]i8
@@ -401,13 +400,13 @@ export{'core_1brc', core_1brc}
     def VI32 = i32~*VI8; def VU32 = u32~*VI8
     def VI64 = i64~*VI8; def VU64 = u64~*VI8
     @for (i to 1000) {
-      def V = VI8
+      def V = VI32
       def arr = match(elwidth{V}) { {(8)}=>ai8; {(16)}=>ai16; {(32)}=>ai32; {(64)}=>ai64 }
       
       def j = i * vcount{V}
       v:= load{V, arr, j}
       
-      @for_const(i to 10) v+= i%3
+      @for_const(i to 4) v = shuf{VU32, v, 0,0,0,0, 4,4,4,4}
       
       store{arr, j, V~~v}
     }
