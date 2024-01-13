@@ -51,12 +51,13 @@ Arg ← {
       !𝕩
     } Type (1+i)↓𝕩
     ;
-  𝕩}
+  '$'≡⊑𝕩? 1↓𝕩;
+  𝕩
+}
+ArgTup ← {Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩}
 Args ← {'('∾')'∾˜ ¯2↓ ∾ ∾⟜", "¨ Arg¨ 𝕩}
 Lbl ← {•Repr 1+•ParseFloat 1↓𝕩}
 
-resGlobal ← ⟨⟩
-AddGlobal ← {resGlobal∾↩<𝕩⋄@}
 staticDefs ← ⟨⟩
 caseIndent ← "  "
 
@@ -100,7 +101,7 @@ EmitFn ← { 𝕊:
         3≡≠ps? Arg 2⊑ps;
         "array": ArrInit 4↓ps;
         "val": {
-          𝕩 SW "!tup{"? ArrInit Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩;
+          𝕩 SW "!tup{"? ArrInit ArgTup 𝕩;
           '?'≡⊑𝕩? ∾⟨"new ", Type 1↓3⊑ps, '[', ⊑':'Split 1↓𝕩, ']'⟩;
           Arg 𝕩
         } 4⊑ps;
@@ -154,23 +155,22 @@ EmitFn ← { 𝕊:
   ⟨fnDefs, beginLns, mainLns⟩
 }
 
+resTop ← ⟨⟩
+resGlobal ← ⟨⟩
+AddGlobal ← {resGlobal∾↩<𝕩⋄@}
 
+AddGlobal "public class Gen {"(⊢∾∾)@+10
+AddGlobal¨ staticDefs
+staticDefs ↩ @
 
 fnIR ← @
 fnLine ← @
-firstFn ← 1
 {
   ⟨⟩: 𝕩;
   ps ← {' '¨⌾((𝕩=@+160)⊸/) 𝕩}¨ ' ' Split all←𝕩
   {
     "beginFn":
       fnIR ↩ ⟨⟩
-      { 𝕊:
-        AddGlobal "public class Gen {"(⊢∾∾)@+10
-        AddGlobal¨ staticDefs
-        staticDefs ↩ @
-        firstFn ↩ 0
-      }⍟⊢ firstFn
       fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", {𝕩↓˜1+⊑𝕩⊐'_'} 1⊑ps, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
       ;
     "endFn":
@@ -189,11 +189,14 @@ firstFn ← 1
       ;
     "require": {
       "'staticline"≡1⊑ps? !staticDefs≢@ ⋄ staticDefs∾↩< ¯1↓20↓all;
-      "'package"≡1⊑ps? resGlobal ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
-      "'import" ≡1⊑ps?      AddGlobal ∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
+      "'package"≡1⊑ps? resTop ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
+      "'import" ≡1⊑ps? resTop ∾ ↩ <∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
       @
     };
     "'//warn": •term.ErrRaw •ToUTF8 (@+10)∾˜¯1↓' 'Join 1↓ps;
+    "constant": {
+      AddGlobal ∾⟨"private static final ", Type 2⊑ps, ' ', 1↓1⊑ps, " = ", "new ", Type 2⊑ps, "{", ','Join ArgTup 3⊑ps, "};"⟩
+    };
     
     "export": AddGlobal ∾⟨"// todo export"⟩;
     
@@ -202,6 +205,6 @@ firstFn ← 1
   } ⊑ps
 }¨ lns
 
-AddGlobal¨⍟(¬firstFn) ""‿"}"
+AddGlobal¨ ""‿"}"
 
-(•wdpath•file.At ⊑•args) •FLines resGlobal
+(•wdpath•file.At ⊑•args) •FLines resTop∾resGlobal

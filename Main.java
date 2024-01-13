@@ -362,6 +362,7 @@ public class Main {
     if (args.length==2) {
       if (args[1].equals("q")) quiet = true;
       if (args[1].equals("repeat")) {
+        quiet = true;
         for (int i=0;i<10;i++) {
           long sns = System.nanoTime();
           sol(args[0]);
