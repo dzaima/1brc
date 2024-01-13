@@ -192,7 +192,7 @@ fn core_1brc(
   # indexed by masked hash
   map_exp:*i8,    # chunks of exp_bulk
   map_hash:*HASH, # full hash
-  map_data:*DATA,  # chunks of 4: min, max, sum, count
+  map_data:*DATA, # chunks of 4, offsets are dt_*
   
   inp:*i8,
   inpOff:ux
@@ -288,6 +288,8 @@ fn core_1brc(
         upd{dt_num, {v} => v + 1}
       }
       
+      
+      
       ########## NUMBER PARSING ##########
       idxs:= load{VIX, bufdata, bufS}
       nums:= VNI8~~gather{i64, inp, 1, idxs, 1} # each 8-byte group is a number
@@ -295,7 +297,7 @@ fn core_1brc(
       
       ########## HASHING ##########
       
-      # hashes two rows of names at a time on native; on Java that's slower :/
+      # hashes two names at a time on native; on Java that's slower :/
       def hashn = if (is_java) 1 else 2
       def VVX = [hashn * exp_bulk]i8
       
