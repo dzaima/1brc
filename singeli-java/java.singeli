@@ -31,9 +31,12 @@ def promote{T, x:T} = x
 def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
 def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
 def promote{T, x:(u1) & T>u1} = emit{T, '^boolpromote', x}
-def popc{x:T & jint{T}} = emit{i32, 'Integer.bitCount', x}
+def popc{x:T & intty{T} & width{T}==64} = emit{i32, 'Long.bitCount', x}
+def popc{x:T & intty{T} & width{T}==32} = emit{i32, 'Integer.bitCount', x}
+def ctz{x:T & intty{T} & width{T}==64} = emit{i32, 'Long.numberOfTrailingZeros', x}
 def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
-def clz{n==0, x:T & jint{T}} = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{n==0, x:T & intty{T} & width{T}==32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{n==0, x:T & intty{T} & width{T}==64} = emit{i32, 'Long.numberOfLeadingZeros', x}
 
 
 # vector things
@@ -89,7 +92,7 @@ local def vecTypeStr{V} = merge{match(eltype{V}) {
 }, 'Vector'}
 local def species{V} = merge{vecTypeStr{V}, '.SPECIES_', fmtnat{width{V}}}
 
-def homMask{x:T} = truncBits{vcount{T}, emit{u64, 'method toLong', x}}
+def homMask{x:T} = emit{u64, 'method toLong', x}
 def broadcast{T, e & vece{T}} = emit{T, 'castmethod broadcast', T, species{T}, promote{eltype{T}, e}}
 
 local def isarr{A} = typekind{A}=='pointer'
