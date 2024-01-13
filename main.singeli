@@ -274,16 +274,12 @@ fn core_1brc(
       ########## DEFS ##########
       def left = bufE - bufS
       
-      def hashn = 1 # if (is_java) 1 else 2
-      def VVX = [hashn * exp_bulk]i8
-      def VHX = HASH~*VVX
-      
-      def maskload{ib} = { # load & mask-to-newline hashn names; returns tup{tup{...each_individual_name}, merged_vector_of_them}
-        def for_vs{G} = @for_const(j to hashn) {
+      def maskload{n, ib} = { # load n names & mask each to newline; returns tup{tup{...each_individual_name}, merged_vector_of_them}
+        def for_vs{G} = @for_const(j to n) {
           off:= load{bufdata, bufS + ib + j}
           G{load{VX, inp, off-exp_bulk}}
         }
-        if (is_java or hashn==1) {
+        if (is_java or n==1) {
           def parts = for_vs{mask_newline}
           tup{parts, pair{parts}}
         } else {
@@ -291,11 +287,11 @@ fn core_1brc(
           tup{halves{total}, total}
         }
       }
-      def get_idxs{hv:[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
+      def get_idxs{hv:T & T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
         idxv:= hv & hash_mask
-        idxs:= each{{i} => cast_i{ux, extract{idxv,i}}, range{hashn} * 4}
+        idxs:= each{{i} => cast_i{ux, extract{idxv,i}}, range{2} * 4}
         hashes:= pair{each{{idx} => load{HASHV, map_hash, idx}, idxs}}
-        m:= homMask{hashes == shuf{VHX, hv, 0,0,0,0, 4,4,4,4}}
+        m:= homMask{hashes == shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}}
         m2:= m & (m-1)
         if (rare{m2 == 0}) {
           def {i0,i1} = idxs
@@ -337,9 +333,8 @@ fn core_1brc(
         upd{dt_num, {v} => v + 1}
       }
       
-      def hiter = proc_bulk/hashn
-      def ibs = range{hiter}*hashn
-      def {partss, totals} = flip{each{maskload, ibs}}
+      def hashn = 1
+      def {partss, totals} = flip{each{maskload{hashn,.}, range{proc_bulk/hashn}*hashn}}
       def hvs = each{hash_vec, totals}
       def idxs = join{each{get_idxs, hvs}}
       def exps = each{get_exp, idxs}
