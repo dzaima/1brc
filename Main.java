@@ -189,7 +189,9 @@ public class Main {
     mem.asSlice(off, tgt.length).asByteBuffer().get(tgt, 0, tgt.length);
   }
   
-  private static boolean quiet;
+  private static boolean quiet, reuseSegment;
+  private static long flen;
+  private static MemorySegment reusedSegment;
   @SuppressWarnings("unchecked")
   static void sol(String path) throws Exception {
     Gen g0 = new Gen();
@@ -214,9 +216,15 @@ public class Main {
     int lbound = 256; // to fit in a 100-byte name, plus SIMD overread
     int rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
     
-    FileChannel channel = new RandomAccessFile(path, "r").getChannel();
-    long flen = channel.size();
-    MemorySegment mem = channel.map(FileChannel.MapMode.READ_ONLY, 0, flen, Arena.global());
+    MemorySegment mem;
+    if (reuseSegment && reusedSegment!=null) {
+      mem = reusedSegment;
+    } else {
+      FileChannel channel = new RandomAccessFile(path, "r").getChannel();
+      flen = channel.size();
+      mem = channel.map(FileChannel.MapMode.READ_ONLY, 0, flen, Arena.global());
+      if (reuseSegment) reusedSegment = mem;
+    }
     
     
     
@@ -361,6 +369,10 @@ public class Main {
     
     if (args.length==2) {
       if (args[1].equals("q")) quiet = true;
+      if (args[1].equals("repeat-reuse")) {
+        reuseSegment = true;
+        args[1] = "repeat";
+      }
       if (args[1].equals("repeat")) {
         quiet = true;
         for (int i=0;i<10;i++) {
