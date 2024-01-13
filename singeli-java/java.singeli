@@ -1,10 +1,17 @@
 def setpackage{x} = require{merge{'package ', x}}
+def ux = i32
 def __le{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __lt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __ge{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __gt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
 def __shr{x:T, y  & 'u'==quality{T}} = emit{T, 'op >>>', x, y}
 def __shl{x:T, y & issigned{T} & width{T}<32} = cast_i{T, promote{i32,x} << y}
+def __min{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.min', a, b}
+def __max{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.max', a, b}
+
+local def canon_i{T} = T
+local def canon_i{T & isprim{T}} = if ('f'==quality{T}) T else ty_s{T}
+local def canon_i{V & vece{V}} = [vcount{V}]canon_i{eltype{V}}
 
 def reinterpret{T, x & ~knum{x}} = fail{'no reinterpret ', T, x}
 def reinterpret{T, x:T} = x
@@ -15,6 +22,11 @@ def java_cast{T, x} = {
 }
 def java_cast{T, x:T} = x
 def cast_i{T, x} = java_cast{T, x}
+def promote{T, x:X} = fail{'bad promote', T, x}
+def promote{T, x:T} = x
+def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
+def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
+def promote{T, x:(u1) & T>u1} = emit{T, '^boolpromote', x}
 
 def static_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'static', 'init', ...vs}
 def object_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'object', 'init', ...vs}
@@ -22,27 +34,17 @@ def static_arr{E, n & knum{n}} = emit{*E, '^arr', 'static', 'len', n}
 def object_arr{E, n & knum{n}} = emit{*E, '^arr', 'object', 'len', n}
 def function_arr{E, n & knum{n}} = emit{*E, '^atbegin', '^newarray', n}
 
-def ux = i32
 def jint{T} = (T==i32) | (T==u32)
-def __min{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.min', a, b}
-def __max{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.max', a, b}
-def promote{T, x:X} = fail{'bad promote', T, x}
-def promote{T, x:T} = x
-def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
-def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
-def promote{T, x:(u1) & T>u1} = emit{T, '^boolpromote', x}
-def popc{x:T & intty{T} & width{T}==64} = emit{i32, 'Long.bitCount', x}
-def popc{x:T & intty{T} & width{T}==32} = emit{i32, 'Integer.bitCount', x}
-def ctz{x:T & intty{T} & width{T}==64} = emit{i32, 'Long.numberOfTrailingZeros', x}
+def popc{x:T & canon_i{T}==i64} = emit{i32, 'Long.bitCount', x}
+def popc{x:T & canon_i{T}==i32} = emit{i32, 'Integer.bitCount', x}
+def clz{n==0, x:T & canon_i{T}==i32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{n==0, x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfLeadingZeros', x}
+def ctz{x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfTrailingZeros', x}
 def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
-def clz{n==0, x:T & intty{T} & width{T}==32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
-def clz{n==0, x:T & intty{T} & width{T}==64} = emit{i32, 'Long.numberOfLeadingZeros', x}
 
 
 # vector things
 require{'import jdk.incubator.vector.*'}
-local def canon_i{T} = if ('f'==quality{T}) T else ty_s{T}
-local def canon_i{V & vece{V}} = [vcount{V}]canon_i{eltype{V}}
 
 def reinterpret{R, x:X & R!=X & vece{R} & vece{X} & width{R}==width{X}} = {
   if (canon_i{R} == canon_i{X}) emit{R, '', x}
@@ -71,7 +73,7 @@ def __not{x:T & veci{T}} = emit{T, 'method not', x}
 
 def __shr{x:T, y & vecs{T}} = lanewise{x, y, 'ASHR'}
 def __shr{x:T, y & vecu{T}} = lanewise{x, y, 'LSHR'}
-def __shl{x:T, y & vecu{T}} = lanewise{x, y, 'LSHL'}
+def __shl{x:T, y & veci{T}} = lanewise{x, y, 'LSHL'}
 
 def __subs{x,y} = fail{'no saturating arith'}
 
@@ -114,8 +116,9 @@ def gather{E, arr:P, ptrOff, idxs:V, scale & scale*8 == width{E}} = {
 def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 & V==[4]i32} = {
   def LD = [16]i8 # using [8]i8 & [1]i64 is a lot of times slower
   def LN = [2]i64
+  idxs2:= idxs + ptrOff
   make{[4]i64, each{{i} => {
-    extract{LN~~load{LD, arr, ptrOff+extract{idxs,i}}, 0}
+    extract{LN~~load{LD, arr, extract{idxs2,i}}, 0}
   }, range{4}}}
 }
 
