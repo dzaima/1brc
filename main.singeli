@@ -137,16 +137,16 @@ def parse_nums{buf:*i16, nums:NV8} = {
       r:= (aligned16 &{u32} 0xff) * 100
       r+= (aligned16 * 10) >>{u16} 8
       r+= (aligned16 >>{u32} 24)
-      tup{2, VNI16~~r}
+      tup{2, i16~*r}
     } else if (0) {
       t16:= madd{u8~*aligned, cycle_make{VNI8,  10,1,0,1}}
       t32:= madd{t16,         cycle_make{VNI16, 10,1}}
-      tup{2, VNI16~~t32}
+      tup{2, i16~*t32}
     } else {
       def magic = 1 + (10<<16) + (100<<24) # https://curiouscoding.nl/posts/1brc/#parsing-using-a-single-multiplication-does-work-after-all-1-dot-48s
       def mullo{a, b} = emit{[4]i64, '_mm256_mul_epi32', a, b}
       r:= mullo{aligned >>{u64} 32, [4]i64**magic} >>{u64} 24 &{u64} 1023
-      tup{0, VNI16~~r}
+      tup{0, i16~*r}
     }
   } else {
     # nums     off1     off2     aligned16
@@ -156,7 +156,7 @@ def parse_nums{buf:*i16, nums:NV8} = {
     # -2.7↩AB^ 11111111 **2*7*?? ^^2^7^??
     # -32.1↩A^ 22222222 3*2*1*?? 3^2^1^??
     # '^'='\0'           '*'=7
-    off:= VNI8~~(v_eq{nums, 46} >>{i32} 23) &{u64} 3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
+    off:= i8~*(v_eq{nums, 46} >>{i32} 23) &{u64} 3 # get offset of '.' minus 1 within i64 (i.e. '1.1'→0, '10.2'→1, '-1.2'→1, '-12.3'→2)
     nums = nums &{u64} 7r0xff # make last byte 0
     off = l128shufb{off, make{VNI8, low8_64}} # expand the low byte of each i64 to each byte
     
@@ -164,7 +164,7 @@ def parse_nums{buf:*i16, nums:NV8} = {
     off+= make{VNI8, cycle{vcount{VNI8}, tup{-1,0, 0,0, 2,0, 0,0}} + low8_64}
     if (is_java) off&= l128shufb_mask{VNI8}
     # display{'off2', off}
-    aligned16:= VNI16~~l128shufb{nums, off}
+    aligned16:= i16~*l128shufb{nums, off}
     
     aligned16 = to_digits{aligned16}
     
@@ -175,7 +175,7 @@ def parse_nums{buf:*i16, nums:NV8} = {
   }
   
   # negate negative numbers
-  neg:= VNI16~~v_ne{u64}{v_eq{nums, 45}, 0}
+  neg:= i16~*v_ne{u64}{v_eq{nums, 45}, 0}
   each16n:= each16 ^ neg
   each16n-= neg
   # each16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
@@ -346,7 +346,7 @@ fn core_1brc(
       
       ########## NUMBER PARSING ##########
       num_idxs:= load{VIX, bufdata, bufS}
-      nums:= VNI8~~gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
+      nums:= i8~*gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
       def num_off = parse_nums{temp_buf, nums}
       
       each{{ij, idx, got, exp} => {
