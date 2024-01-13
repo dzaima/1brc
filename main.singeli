@@ -355,47 +355,6 @@ fn core_1brc(
         else to_fail{ij}
       }, range{proc_bulk}, idxs, join{partss}, exps}
       
-      ########## OLD HASHING ##########
-      if (0) @for (i to hiter) {
-        def ib = i*hashn
-        def ijs = each{{j} => ib+j, range{hashn}}
-        
-        # load names
-        def {parts, total} = maskload{ib} # load names & mask until newline
-        hv:VHX = hash_vec{total} # hash
-        idxs:= get_idxs{hv} # get map indices from the hashes
-        
-        if (hashn==2 and not is_java) {
-          each{{j, idx} => {
-            def ij = ib + j
-            exp:= get_exp{idx}
-            if (exp !== select{parts,j}) {
-              to_fail{ij}
-            } else {
-              update{ij, idx}
-            }
-          }, range{hashn}, idxs}
-        } else @for_const (j to hashn) {
-          def ij = ib + j
-          if (rare{ij >= left}) goto{buf_end}
-          hash:= extract{hv, j*4}
-          
-          idx:= cast_i{ux, hash&hash_mask}
-          m:= homMask{hash == load{HASHV, map_hash, idx}}
-          if (rare{m==0}) { # no matching hash value
-            to_fail{ij}
-          } else {
-            idx+= ctz{m}
-            exp:= load{VX, map_exp, idx*exp_bulk}
-            if (exp !== select{parts,j}) {
-              to_fail{ij}
-            } else {
-              update{ij, idx}
-            }
-          }
-        }
-      }
-      
       if (one and ++retctr >= 7) return{}
       
       bufS+= vcount{VIX}
