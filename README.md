@@ -1,6 +1,6 @@
 # [1BRC](https://github.com/gunnarmorling/1brc) solution with [Singeli](https://github.com/mlochbaum/Singeli)
 
-Java version can be built & run with `make run file=path/to/measurements.txt`, or your favorite way of building & running `Main.java`+`Gen.java` (needs Java 21 & `--add-modules=jdk.incubator.vector --enable-preview -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0`).
+Java version can be built & run with `make run file=path/to/measurements.txt`, or your favorite way of building & running `Main.java`+`Gen.java` (needs Java 21 & `--add-modules=jdk.incubator.vector --enable-preview`).
 
 C version can be built with `make a.out` and then run with `./a.out [path/to/measurements.txt]`.
 
