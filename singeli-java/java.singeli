@@ -27,6 +27,38 @@ def promote{T, x:T} = x
 def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
 def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
 def promote{T, x:(u1) & T>u1} = emit{T, '^boolpromote', x}
+local def isarr{A} = typekind{A}=='pointer'
+if (0) {
+  require{'import sun.misc.Unsafe'}
+  require{'import java.lang.reflect.Field'}
+  require{'^unsafe'}
+  local def unsafe = 'MY_UNSAFE'
+  local def typecase{T, upper} = select{match(canon_i{T}) {
+    {(i8)}  => tup{'Byte',   'BYTE'}
+    {(i16)} => tup{'Short',  'SHORT'}
+    {(i32)} => tup{'Int',    'INT'}
+    {(i64)} => tup{'Long',   'LONG'}
+    {(f32)} => tup{'Float',  'FLOAT'}
+    {(f64)} => tup{'Double', 'DOUBLE'}
+  }, upper}
+  local def offset{T} = emit{i32, '', merge{'Unsafe.ARRAY_', typecase{T,1}, '_BASE_OFFSET'}}
+  local def calc_eoff{E, eoff} = offset{E} + eoff * (width{E}/8)
+  local def putget{op, T} = merge{unsafe, '.', op, typecase{T,0}}
+  def load{T, arr:A, eoff & isprim{T}} = {
+    def E = eltype{A}
+    emit{T, putget{'get',T}, arr, calc_eoff{E,eoff}}
+  }
+  
+  # replace load/store ops with ones that are unsafe; doesn't seem good
+  # def load{arr:A, eoff & isarr{A}} = load{eltype{A}, arr, eoff}
+  # def store{arr:A, eoff, v & isarr{A} & can_promote{eltype{A}, v}} = {
+  #   def E = eltype{A}
+  #   emit{void, putget{'put',E}, arr, calc_eoff{E,eoff}, v}
+  # }
+} else {
+  def LD = [16]i8 # using [8]i8 is a lot of times slower
+  def load{(i64), arr:*i8, eoff} = extract{re_el{i64, load{LD, arr, eoff}}, 0}
+}
 
 def static_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'static', 'init', ...vs}
 def object_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'object', 'init', ...vs}
@@ -97,7 +129,6 @@ local def species{V} = merge{vecTypeStr{V}, '.SPECIES_', fmtnat{width{V}}}
 def homMask{x:T} = emit{u64, 'method toLong', x}
 def broadcast{T, e & vece{T}} = emit{T, 'castmethod broadcast', T, species{T}, promote{eltype{T}, e}}
 
-local def isarr{A} = typekind{A}=='pointer'
 local def arroff{A, V, off} = if (vece{V} and isarr{A} and eltype{A}==eltype{V}) 1 else 0
 def load{V, arr:A, off & arroff{A, V, off}} = emit{V, 'castmethod fromArray', V, species{V}, arr, off}
 def store{arr:A, off, x:V & arroff{A, V, off}} = emit{void, 'method intoArray', x, arr, off}
@@ -114,12 +145,8 @@ def gather{E, arr:P, ptrOff, idxs:V, scale & scale*8 == width{E}} = {
 
 # horrible emulation of an unaligned little-endian gather
 def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 & V==[4]i32} = {
-  def LD = [16]i8 # using [8]i8 & [1]i64 is a lot of times slower
-  def LN = [2]i64
   idxs2:= idxs + ptrOff
-  make{[4]i64, each{{i} => {
-    extract{LN~~load{LD, arr, extract{idxs2,i}}, 0}
-  }, range{4}}}
+  make{[4]i64, each{{i} => load{i64, arr, extract{idxs2,i}}, range{4}}}
 }
 
 local def exp_op{op, me, a:T, b:T} = {

@@ -58,7 +58,6 @@ ArgTup ← {Arg¨ ','Split {𝕩↓˜¯1-⊑'}'⊐˜⌽𝕩} 5↓𝕩}
 Args ← {'('∾')'∾˜ ¯2↓ ∾ ∾⟜", "¨ Arg¨ 𝕩}
 Lbl ← {•Repr 1+•ParseFloat 1↓𝕩}
 
-staticDefs ← ⟨⟩
 caseIndent ← "  "
 
 globalCtr ← 0
@@ -162,8 +161,6 @@ resGlobal ← ⟨⟩
 AddGlobal ← {resGlobal∾↩<𝕩⋄@}
 
 AddGlobal "public class Gen {"(⊢∾∾)@+10
-AddGlobal¨ staticDefs
-staticDefs ↩ @
 
 fnIR ← @
 fnLine ← @
@@ -193,11 +190,21 @@ fnLine ← @
       fnIR↩@
       ;
     "require": {
-      "'staticline"≡1⊑ps? !staticDefs≢@ ⋄ staticDefs∾↩< ¯1↓20↓all;
-      "'package"≡1⊑ps? resTop ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
-      "'import" ≡1⊑ps? resTop ∾ ↩ <∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
+      "'staticline": AddGlobal ¯1↓20↓all;
+      "'package": resTop ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
+      "'import":  resTop ∾ ↩ <∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
+      "'^unsafe'":
+        AddGlobal "private static final Unsafe MY_UNSAFE;"
+        AddGlobal "static {"
+        AddGlobal "  try {"
+        AddGlobal "    Field f = Unsafe.class.getDeclaredField(""theUnsafe"");"
+        AddGlobal "    f.setAccessible(true);"
+        AddGlobal "    MY_UNSAFE = (Unsafe) f.get(Unsafe.class);"
+        AddGlobal "  } catch (Throwable e) { throw new RuntimeException(e); }"
+        AddGlobal "}"
+        ;
       @
-    };
+    } 1⊑ps;
     "'//warn": •term.ErrRaw •ToUTF8 (@+10)∾˜¯1↓' 'Join 1↓ps;
     "constant": {
       AddGlobal ∾⟨"private static final ", Type 2⊑ps, ' ', 1↓1⊑ps, " = ", "new ", Type 2⊑ps, "{", ','Join ArgTup 3⊑ps, "};"⟩
