@@ -34,7 +34,7 @@ def __add{a:T, (0) & intty{T}} = a # prettier output
 def __add{(0), a:T & intty{T}} = a
 def andnot{a, b & intany{a} & intany{b}} = a & ~b
 local def to_u32{x} = promote{u32,ty_u{x}}
-def clz{n, x:T & isint{T} & width{T}>=32} = clz{0, x} - (width{T}-n)
+def clz{n, x:T & isint{T} & width{T}>=32} = clz{width{T}, x} - (width{T}-n)
 def clz{n, x:T & isint{T} & width{T}<32} = clz{n, to_u32{x}}
 
 def tree_fold{F, x} = {
@@ -99,8 +99,8 @@ if (hasarch{'AVX2'}) {
   def ctz{x:T & isint{T} & width{T}==64} = emit{ux, '_tzcnt_u64', x}
   def ctz{x:T & isint{T} & width{T}<=32} = emit{ux, '_tzcnt_u32', x}
   
-  def clz{n==0, x:T & isint{T} & width{T}==64} = emit{ux, '_lzcnt_u64', x}
-  def clz{n==0, x:T & isint{T} & width{T}==32} = emit{ux, '_lzcnt_u32', x}
+  def clz{n==64, x:T & isint{T} & width{T}==64} = emit{ux, '_lzcnt_u64', x}
+  def clz{n==32, x:T & isint{T} & width{T}==32} = emit{ux, '_lzcnt_u32', x}
   
   def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
   def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}

@@ -69,8 +69,8 @@ def function_arr{E, n & knum{n}} = emit{*E, '^atbegin', '^newarray', n}
 def jint{T} = (T==i32) | (T==u32)
 def popc{x:T & canon_i{T}==i64} = emit{i32, 'Long.bitCount', x}
 def popc{x:T & canon_i{T}==i32} = emit{i32, 'Integer.bitCount', x}
-def clz{n==0, x:T & canon_i{T}==i32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
-def clz{n==0, x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfLeadingZeros', x}
+def clz{n==32, x:T & canon_i{T}==i32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{n==64, x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfLeadingZeros', x}
 def ctz{x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfTrailingZeros', x}
 def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
 
