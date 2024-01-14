@@ -210,7 +210,7 @@ public class Main {
     }
     
     int periter_one = g0.core_1brc_periter();
-    int periter_bulk = 50;
+    int periter_bulk = 20;
     int periter = periter_one * periter_bulk;
     
     int lbound = 256; // to fit in a 100-byte name, plus SIMD overread
@@ -266,17 +266,17 @@ public class Main {
             memTo(mem, cstart-lbound, inp);
             
             int arr_off = lbound;
+            glock_r.lock();
             for (int j = 0; j < periter_bulk; j++) {
-              glock_r.lock();
               g.core_1brc(
                 ident, buf,
                 hash_mask,
                 mapg_exp, mapg_hash, map_data,
                 inp, arr_off
               );
-              glock_r.unlock();
               arr_off+= periter_one;
             }
+            glock_r.unlock();
           }
         } catch (Exception e) { e.printStackTrace(); System.exit(1); }
       };
@@ -368,14 +368,15 @@ public class Main {
     }
     
     if (args.length==2) {
-      if (args[1].equals("q")) quiet = true;
-      if (args[1].equals("repeat-reuse")) {
+      String a1 = args[1];
+      if (a1.equals("q")) quiet = true;
+      if (a1.equals("repeat-reuse")) {
         reuseSegment = true;
-        args[1] = "repeat";
+        a1 = "repeat";
       }
-      if (args[1].equals("repeat")) {
+      if (a1.equals("repeat") || a1.equals("repeat-inf")) {
         quiet = true;
-        for (int i=0;i<10;i++) {
+        for (int i = 0; a1.equals("repeat-inf")? true : i<10; i++) {
           long sns = System.nanoTime();
           sol(args[0]);
           long ens = System.nanoTime();

@@ -7,7 +7,6 @@ IR_PASS = bqn -e '•Out¨ (•Import"$(SINGELI_PATH)/ir.bqn").Restructure •FL
 java-build: classes/main/Main.class
 
 JAVA_RUN = java --add-modules=jdk.incubator.vector --enable-preview
-# JAVA_RUN+= -Djdk.incubator.vector.VECTOR_ACCESS_OOB_CHECK=0
 JAVA_RUN+= -cp classes main.Main
 
 run: java-build
