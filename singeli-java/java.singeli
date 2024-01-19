@@ -196,18 +196,17 @@ def make{V, els & vcount{V}==tuplen{els}} = {
   }
 }
 
-def pair{a:T, b:T} = {
-  def D = [vcount{T}*2]eltype{T}
-  def buf = getenv{'make_buf'}{eltype{D}, vcount{D}}
-  store{buf, 0, a}
-  store{buf, vcount{T}, b}
-  load{D, buf, 0}
+local def reinterpret_shape{R, x:T, p} = emit{R, 'castmethod reinterpretShape', R, x, species{R}, p}
+def pair{...vs & hastype{select{vs,0}}} = {
+  def T = type{select{vs,0}}
+  def n = tuplen{vs}
+  def R = [vcount{T}*n]eltype{T}
+  tree_fold{|, each{{v,i} => reinterpret_shape{R, v, -i}, vs, range{n}}}
 }
-def halves{a:T} = {
+def halves{a:T} = each{half{a,.}, range{2}}
+def half{a:T, i} = {
   def H = [vcount{T}/2]eltype{T}
-  def buf = getenv{'make_buf'}{eltype{T}, vcount{T}}
-  store{buf, 0, a}
-  tup{load{H,buf,0}, load{H,buf,vcount{H}}}
+  reinterpret_shape{H, a, i}
 }
 
 def display{a, b} = {}

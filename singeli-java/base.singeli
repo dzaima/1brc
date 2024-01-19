@@ -11,6 +11,8 @@ def isprim{T} = typekind{T}=='primitive'
 def intty{T} = if (isprim{T} and quality{T}!='f') 1 else 0
 def intany{x} = knum{x}
 def intany{x:T} = intty{T}
+def hastype{x} = 0
+def hastype{x:T} = 1
 def same = is
 
 def fail{...x} = { show{...x}; '!'{} }

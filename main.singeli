@@ -423,7 +423,13 @@ export{'core_1brc', core_1brc}
       def j = i * vcount{V}
       v:= load{V, arr, j}
       
-      # @for_const(i to 4) v = v <<{i16} 10
+      # @for_const(i to 1) {
+      #   each{{G} => {
+      #     each{{T} => {
+      #       v = G{T}{v, 2}
+      #     }, tup{i8,i16,i32,i64,u8,u16,u32,u64}}
+      #   }, tup{+,-,<<,>>,&,|,^}}
+      # }
       
       store{arr, j, V~~v}
     }
