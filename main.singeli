@@ -287,6 +287,7 @@ fn core_1brc(
           tup{halves{total}, total}
         }
       }
+      
       def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
       def get_idxs{hv:T & T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
         idxv:= hv & hash_mask
@@ -304,11 +305,8 @@ fn core_1brc(
         }
         idxs
       }
-      def get_idx{hash:(HASH)} = {
-        idx:= cast_i{ux, hash&hash_mask}
-        m:= homMask{hash == load{HASHV, map_hash, idx}}
-        idx + ctz{m}
-      }
+      def get_idx_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
+      def get_idx{hash:(HASH)} = get_idx_raw{hash, cast_i{ux, hash&hash_mask}}
       def get_idxs{hv:[4]HASH} = tup{get_idx{extract{hv, 0}}}
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
@@ -425,6 +423,10 @@ export{'core_1brc', core_1brc}
       def j = i * vcount{V}
       v:= load{V, arr, j}
       
+      # @for_const(i to 32) v = V~~v_eq{v,v}
+      # @for_const(i to 32) v = v ^ V ** -1
+      # @for_const(i to 32) v = v & (v ^ V ** -1)
+      # @for_const(i to 32) v = andnot{v,v}
       # @for_const(i to 1) {
       #   each{{G} => {
       #     each{{T} => {

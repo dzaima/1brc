@@ -357,7 +357,7 @@ public class Main {
       short[] b_i16 = new short[40000]; b_i16[10000] = 10;
       int[]   b_i32 = new int[40000];   b_i32[10000] = 10;
       long[]  b_i64 = new long[40000];  b_i64[10000] = 10;
-      for (int i = 0; i < 20; i++) {
+      for (int i = 0; i < 100; i++) {
         long sns = System.nanoTime();
         int rep = 10000;
         for (int j = 0; j < rep; j++) g.minibench(b_i8, b_i16, b_i32, b_i64);
