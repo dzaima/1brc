@@ -342,7 +342,7 @@ fn core_1brc(
         0, # merged_idxs; if true, T_idxs is ignored and assumed as [32]i8
       } else tup{
         1, # loadn
-        [32]i8, # T_hvs
+        [16]i8, # T_hvs
         [32]i8, # T_idxs
         0, # merged_idxs; if true, T_idxs is ignored and assumed as [32]i8
       }
@@ -354,7 +354,7 @@ fn core_1brc(
       def mk{vs & width{type{select{vs,0}}}==128} = mk{{}=>each{pair, split{2,vs}}, {}=>vs}
       
       def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
-      def r_masked = mk{{} => totals, {} => join{partss}}
+      def r_masked = mk{{} => mk{totals}{[32]i8}, {} => join{partss}}
       
       def r_hvs = mk{each{hash_vec, r_masked{T_hvs}}}
       
