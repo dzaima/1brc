@@ -451,46 +451,46 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
             IntVector v292 = (v291);
             v282_hv = v282_hv.lanewise(VectorOperators.XOR, v292);
             int v293 = v249_hv.lane(0);
-            int v294 = v260_hv.lane(0);
-            int v295 = v271_hv.lane(0);
-            int v296 = v282_hv.lane(0);
-            int v297 = v293 & v2_hash_mask;
-            int v298_idx = (int) v297;
-            IntVector v299 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v298_idx);
-            IntVector v300 = (IntVector) IntVector.SPECIES_128.broadcast(v293);
-            VectorMask<?> v301 = v300.compare(VectorOperators.EQ, v299);
-            long v302_m = v301.toLong();
-            int v303 = Long.numberOfTrailingZeros(v302_m);
-            int v304 = v298_idx + v303;
-            int v305 = v294 & v2_hash_mask;
-            int v306_idx = (int) v305;
-            IntVector v307 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v306_idx);
-            IntVector v308 = (IntVector) IntVector.SPECIES_128.broadcast(v294);
-            VectorMask<?> v309 = v308.compare(VectorOperators.EQ, v307);
-            long v310_m = v309.toLong();
-            int v311 = Long.numberOfTrailingZeros(v310_m);
-            int v312 = v306_idx + v311;
-            int v313 = v295 & v2_hash_mask;
-            int v314_idx = (int) v313;
-            IntVector v315 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v314_idx);
-            IntVector v316 = (IntVector) IntVector.SPECIES_128.broadcast(v295);
-            VectorMask<?> v317 = v316.compare(VectorOperators.EQ, v315);
-            long v318_m = v317.toLong();
-            int v319 = Long.numberOfTrailingZeros(v318_m);
-            int v320 = v314_idx + v319;
-            int v321 = v296 & v2_hash_mask;
+            int v294 = v293 & v2_hash_mask;
+            int v295_idx = (int) v294;
+            IntVector v296 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v295_idx);
+            IntVector v297 = (IntVector) IntVector.SPECIES_128.broadcast(v293);
+            VectorMask<?> v298 = v297.compare(VectorOperators.EQ, v296);
+            long v299_m = v298.toLong();
+            int v300 = Long.numberOfTrailingZeros(v299_m);
+            int v301 = v295_idx + v300;
+            int v302 = v260_hv.lane(0);
+            int v303 = v302 & v2_hash_mask;
+            int v304_idx = (int) v303;
+            IntVector v305 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v304_idx);
+            IntVector v306 = (IntVector) IntVector.SPECIES_128.broadcast(v302);
+            VectorMask<?> v307 = v306.compare(VectorOperators.EQ, v305);
+            long v308_m = v307.toLong();
+            int v309 = Long.numberOfTrailingZeros(v308_m);
+            int v310 = v304_idx + v309;
+            int v311 = v271_hv.lane(0);
+            int v312 = v311 & v2_hash_mask;
+            int v313_idx = (int) v312;
+            IntVector v314 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v313_idx);
+            IntVector v315 = (IntVector) IntVector.SPECIES_128.broadcast(v311);
+            VectorMask<?> v316 = v315.compare(VectorOperators.EQ, v314);
+            long v317_m = v316.toLong();
+            int v318 = Long.numberOfTrailingZeros(v317_m);
+            int v319 = v313_idx + v318;
+            int v320 = v282_hv.lane(0);
+            int v321 = v320 & v2_hash_mask;
             int v322_idx = (int) v321;
             IntVector v323 = (IntVector) IntVector.SPECIES_128.fromArray(v4_map_hash, v322_idx);
-            IntVector v324 = (IntVector) IntVector.SPECIES_128.broadcast(v296);
+            IntVector v324 = (IntVector) IntVector.SPECIES_128.broadcast(v320);
             VectorMask<?> v325 = v324.compare(VectorOperators.EQ, v323);
             long v326_m = v325.toLong();
             int v327 = Long.numberOfTrailingZeros(v326_m);
             int v328 = v322_idx + v327;
-            int v329 = v304 * 16;
+            int v329 = v301 * 16;
             ByteVector v330 = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v329);
-            int v331 = v312 * 16;
+            int v331 = v310 * 16;
             ByteVector v332 = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v331);
-            int v333 = v320 * 16;
+            int v333 = v319 * 16;
             ByteVector v334 = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v333);
             int v335 = v328 * 16;
             ByteVector v336 = (ByteVector) ByteVector.SPECIES_128.fromArray(v3_map_exp, v335);
@@ -575,7 +575,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
             l28: {
               l27: {
                 if (!v410) break l27;
-                int v411_dataoff = v304 * 4;
+                int v411_dataoff = v301 * 4;
                 short v412 = v192_temp_buf[2];
                 long v413_temp = (long) v412;
                 int v414 = v411_dataoff + 2;
@@ -613,7 +613,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
             l31: {
               l30: {
                 if (!v437) break l30;
-                int v438_dataoff = v312 * 4;
+                int v438_dataoff = v310 * 4;
                 short v439 = v192_temp_buf[6];
                 long v440_temp = (long) v439;
                 int v441 = v438_dataoff + 2;
@@ -652,7 +652,7 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
             l34: {
               l33: {
                 if (!v465) break l33;
-                int v466_dataoff = v320 * 4;
+                int v466_dataoff = v319 * 4;
                 short v467 = v192_temp_buf[10];
                 long v468_temp = (long) v467;
                 int v469 = v466_dataoff + 2;
