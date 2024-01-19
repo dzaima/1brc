@@ -287,10 +287,10 @@ fn core_1brc(
           tup{halves{total}, total}
         }
       }
-      def extract_hashes{v:T} = each{{i} => cast_i{ux, extract{v,i}}, range{vcount{T}/4} * 4}
+      def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
       def get_idxs{hv:T & T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
         idxv:= hv & hash_mask
-        idxs:= extract_hashes{idxv}
+        idxs:= each{cast_i{ux,.}, extract_hashes{idxv}}
         hashes:= pair{each{load{HASHV, map_hash, .}, idxs}}
         m:= homMask{hashes == shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}}
         m2:= m & (m-1)
@@ -336,12 +336,27 @@ fn core_1brc(
       
       # hashing & map lookup
       def loadn = 1
-      def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
-      def hvs = each{hash_vec, totals}
-      def idxs = {
-        if (loadn==2) join{each{get_idxs, hvs}}
-        else each{get_idx, join{each{{v:T} => each{extract{v,.}, 4*range{vcount{T}/4}}, hvs}}}
+      def T_hvs = [32]i8
+      def T_idxs = [32]i8
+      def merged_idxs = 0 # if true, T_idxs is ignored and assumed as [32]i8
+      
+      def mk{D,H} = {
+        def me{T==[16]i8} = H{}
+        def me{T==[32]i8} = D{}
       }
+      def mk{vs & width{type{select{vs,0}}}==256} = mk{{}=>vs, {}=>join{each{halves,vs}}}
+      def mk{vs & width{type{select{vs,0}}}==128} = mk{{}=>each{pair, split{2,vs}}, {}=>vs}
+      
+      def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
+      def r_masked = mk{{} => totals, {} => join{partss}}
+      
+      def r_hvs = mk{each{hash_vec, r_masked{T_hvs}}}
+      
+      def idxs = {
+        if (merged_idxs) join{each{get_idxs, r_hvs{[32]i8}}}
+        else each{get_idx, join{each{extract_hashes, r_hvs{T_idxs}}}}
+      }
+      
       def exps = each{get_exp, idxs}
       
       # number parsing
