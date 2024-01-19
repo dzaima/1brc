@@ -289,6 +289,7 @@ int main(int argc, char* argv[]) {
   
   // parse head the slow way
   ux init_end = start + lbound;
+  init_end = (init_end+4095) & ~(ux)4095;
   if (init_end > end) init_end = (ux)end;
   basic_core(start, init_end);
   start = init_end;
