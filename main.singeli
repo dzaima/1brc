@@ -335,11 +335,17 @@ fn core_1brc(
       }
       
       # hashing & map lookup
-      def loadn = 1
-      def T_hvs = [32]i8
-      def T_idxs = [32]i8
-      def merged_idxs = 0 # if true, T_idxs is ignored and assumed as [32]i8
-      
+      def {loadn, T_hvs, T_idxs, merged_idxs} = if (is_java) tup{
+        1, # loadn
+        [16]i8, # T_hvs
+        [16]i8, # T_idxs
+        0, # merged_idxs; if true, T_idxs is ignored and assumed as [32]i8
+      } else tup{
+        1, # loadn
+        [32]i8, # T_hvs
+        [32]i8, # T_idxs
+        0, # merged_idxs; if true, T_idxs is ignored and assumed as [32]i8
+      }
       def mk{D,H} = {
         def me{T==[16]i8} = H{}
         def me{T==[32]i8} = D{}
