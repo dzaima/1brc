@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
       }
       // if (input!=nullptr) munmap(input, map_size);
       // std::cout << "req "<<s<<".."<<e<<": mapping off=" << map_off << "; start=" << start << ", end=" << end << std::endl;
-      input = (char*)mmap(input, map_size, PROT_READ, MAP_PRIVATE | (input==nullptr? 0 : MAP_FIXED), fd, map_off);
+      input = (char*)mmap(input, map_size, PROT_READ, MAP_PRIVATE | (input==nullptr? 0 : MAP_FIXED) | MAP_POPULATE, fd, map_off);
     }
   };
   
