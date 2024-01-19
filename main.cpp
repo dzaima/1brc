@@ -15,7 +15,10 @@
 
 typedef uint64_t ux;
 constexpr int hash_mask = 0xfff; // i.e. hash table size minus one
+constexpr bool global_mmap = false;
 int num_threads = 8;
+#define RARE(X) __builtin_expect(X, 0)
+#define assert(X) ({ if (!(X)) abort(); })
 
 // copied from main.singeli:
 constexpr int hashv_count = 4;
@@ -46,7 +49,7 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string& k) {
 }
 static int64_t* get_data(std::string& k) {
   auto v = long_entries.find(k);
-  if (__builtin_expect(v == long_entries.end(), 0)) return get_data_new(k);
+  if (RARE(v == long_entries.end())) return get_data_new(k);
   return v->second;
 }
 
@@ -219,7 +222,7 @@ int main(int argc, char* argv[]) {
   bool quiet = argc<3? false : argv[2][0]=='q';
   
   ux flen = lseek(fd, 0, SEEK_END);
-  input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
+  if (global_mmap) input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
   
   for (ux i = 0; i < hash_size; i++) mapg_hash[i] = def_hash(i);
   for (ux i = 0; i < hash_size; i++) {
@@ -230,15 +233,15 @@ int main(int argc, char* argv[]) {
   
   int periter = core_1brc_periter();
   
-  int lbound = 256; // to fit in a 100-byte name, plus SIMD overread
-  int rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
+  constexpr ux lbound = 256; // to fit in a 100-byte name, plus SIMD overread
+  constexpr ux rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
   
   ux start = 0;
   ux end = flen;
   
   
   
-  char* thread_stats = NULL;
+  char* thread_stats = nullptr;
   int thread_n = 0;
   if (num_threads > 1) {
     char** all_stats = new char*[num_threads];
@@ -248,7 +251,7 @@ int main(int argc, char* argv[]) {
     int stat_len = max_names*max_ent_length;
     
     for (int i = 0; i < num_threads; i++) {
-      thread_stats = (char*) mmap(NULL, stat_len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_SHARED, -1, 0);
+      thread_stats = (char*) mmap(nullptr, stat_len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_SHARED, -1, 0);
       all_stats[i] = thread_stats;
       thread_n = i;
       int chpid = fork();
@@ -287,12 +290,38 @@ int main(int argc, char* argv[]) {
     run_core:;
   }
   
+  constexpr ux map_size = 32<<20; // 32MiB
+  ux map_off = 0;
+  constexpr ux align = 4096;
+  assert(align >= lbound);
+  constexpr ux alignm = align - 1;
+  auto ensure_input = [&fd, &map_off, &start, &end](ux s, ux e) { // potentiall updates input & start & end
+    if (global_mmap) return;
+    if (RARE(input==nullptr) || RARE(e>=map_size)) {
+      if (e+rbound >= map_size) {
+        ux delta = s & ~alignm;
+        assert(delta!=0);
+        delta-= align; // include 
+        start-= delta;
+        end-= delta;
+        map_off+= delta;
+        assert(e-delta + rbound < map_size);
+      }
+      // if (input!=nullptr) munmap(input, map_size);
+      // std::cout << "req "<<s<<".."<<e<<": mapping off=" << map_off << "; start=" << start << ", end=" << end << std::endl;
+      input = (char*)mmap(input, map_size, PROT_READ, MAP_PRIVATE | (input==nullptr? 0 : MAP_FIXED), fd, map_off);
+    }
+  };
+  
   // parse head the slow way
   ux init_end = start + lbound;
-  init_end = (init_end+4095) & ~(ux)4095;
+  init_end = (init_end + alignm) & ~alignm;
   if (init_end > end) init_end = (ux)end;
-  basic_core(start, init_end);
-  start = init_end;
+  ux init_len = init_end - start;
+  
+  ensure_input(start, init_end);
+  basic_core(start, start+init_len);
+  start+= init_len;
   
   
   // printf("thread %d: %ld..%ld\n", thread_n, start, end);
@@ -301,6 +330,7 @@ int main(int argc, char* argv[]) {
   ux inpsize = lbound + periter + rbound;
   ux bulkchars = 0;
   while (start+inpsize < end) {
+    ensure_input(start, start+periter);
     core_1brc(
       0, buf,
       hash_mask,
@@ -320,9 +350,12 @@ int main(int argc, char* argv[]) {
   
   
   ux left = end-start;
-  if (left > 0) basic_core(end-left, end);
+  if (left > 0) {
+    ensure_input(end-left, end);
+    basic_core(end-left, end);
+  }
   
-  if (thread_stats == NULL) {
+  if (thread_stats == nullptr) {
     if (!quiet) print_stats();
   } else {
     auto add = [&thread_stats](std::string name, int64_t* data){
