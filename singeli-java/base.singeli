@@ -85,6 +85,7 @@ local def qualChange{q} = {
 def ty_u = qualChange{'u'}
 def ty_s = qualChange{'i'}
 def ty_f = qualChange{'f'}
+def halves{x:T} = tup{half{x,0}, half{x,1}}
 
 def is_java = ~hasarch{'AVX2'}
 if (hasarch{'AVX2'}) {
@@ -160,7 +161,6 @@ if (hasarch{'AVX2'}) {
   def pair{a:T,b:T & width{T}==128} = re_el{eltype{T}, emit{[8]i32, '_mm256_setr_m128i', re_el{i32,a}, re_el{i32,b}}}
   def half{x:T, i==0 & width{T}==256} = [vcount{T}/2]eltype{T}~~emit{[16]i8, '_mm256_castsi256_si128', ty_u{x}}
   def half{x:T, i==1 & width{T}==256} = [vcount{T}/2]eltype{T}~~emit{[16]i8, '_mm256_extracti128_si256', ty_u{x}, i}
-  def halves{x:T} = tup{half{x,0}, half{x,1}}
   
   def printstr{v0:V, ...g0} = { # \n → $, \0 → ^
     v:= v0

@@ -430,6 +430,9 @@ export{'core_1brc', core_1brc}
       #     }, tup{i8,i16,i32,i64,u8,u16,u32,u64}}
       #   }, tup{+,-,<<,>>,&,|,^}}
       # }
+      # v = pair{halves{v}}
+      # v = V~~half{gather{i64, ai8, 1, v, 1}, 0}
+      # v = V~~v_eq{v, v}
       
       store{arr, j, V~~v}
     }
