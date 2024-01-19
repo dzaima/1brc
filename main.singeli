@@ -423,7 +423,7 @@ export{'core_1brc', core_1brc}
       def j = i * vcount{V}
       v:= load{V, arr, j}
       
-      # @for_const(i to 4) v = v >>{i32} 10
+      # @for_const(i to 4) v = v <<{i16} 10
       
       store{arr, j, V~~v}
     }

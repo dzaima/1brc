@@ -239,6 +239,7 @@ int main(int argc, char* argv[]) {
   
   
   char* thread_stats = NULL;
+  int thread_n = 0;
   if (num_threads > 1) {
     char** all_stats = new char*[num_threads];
     int* pids = new int[num_threads];
@@ -249,6 +250,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < num_threads; i++) {
       thread_stats = (char*) mmap(NULL, stat_len, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_SHARED, -1, 0);
       all_stats[i] = thread_stats;
+      thread_n = i;
       int chpid = fork();
       if (chpid==0) {
         start = (flen *  i   ) / num_threads;
@@ -286,13 +288,13 @@ int main(int argc, char* argv[]) {
   }
   
   // parse head the slow way
-  int init_end = start + lbound;
-  if (init_end > end) init_end = (int)end;
+  ux init_end = start + lbound;
+  if (init_end > end) init_end = (ux)end;
   basic_core(start, init_end);
   start = init_end;
   
   
-  
+  // printf("thread %d: %ld..%ld\n", thread_n, start, end);
   ux* buf = new ux[core_1brc_buf_elts()];
   
   ux inpsize = lbound + periter + rbound;
@@ -306,7 +308,7 @@ int main(int argc, char* argv[]) {
     );
     start+= periter;
     bulkchars+= periter;
-    if (bulkchars > 12890000) { // (2⋆31)÷999 records are needed to overflow the int32_t sum. At max there's one record per 6 chars "a;0.0\n", so 6×(2⋆31)÷999
+    if (bulkchars > 12800000) { // (2⋆31)÷999 records are needed to overflow the int32_t sum. At max there's one record per 6 chars "a;0.0\n", so 6×(2⋆31)÷999; round down for head/tail to fit
       for (ux i = 0; i < hash_size; i++) {
         mapg_sum[i]+= mapg_data[i*4 + dt_sum];
         mapg_data[i*4 + dt_sum] = 0;
