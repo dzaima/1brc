@@ -16,6 +16,9 @@ run-cmd:
 	@echo $(JAVA_RUN)
 
 f = -O3
+ifeq ($(DEBUG_SYMBOLS),1)
+	f += -g
+endif
 obj/gen.o: gen.c header.h
 	@mkdir -p obj
 	$(CC)  $(f) -march=native -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
