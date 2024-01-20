@@ -6,26 +6,21 @@ SW ← ⊢ ≡ ≠⊸↑˜
 lns ← •FLines"/dev/stdin"
 
 prims ← •HashMap´ <˘⍉[
-  ⟨"u1", "boolean"⟩
+  ⟨"u1", "boolean"⟩, ⟨"f32", "float"⟩, ⟨"f64", "double"⟩
   ⟨"u8", "byte"⟩, ⟨"u16", "short"⟩, ⟨"u32", "int"⟩, ⟨"u64", "long"⟩
   ⟨"i8", "byte"⟩, ⟨"i16", "short"⟩, ⟨"i32", "int"⟩, ⟨"i64", "long"⟩
   ⟨"void", "void"⟩
 ]
 boxed ← •HashMap´ <˘⍉[
-  ⟨"u1", "Boolean"⟩
+  ⟨"u1", "Boolean"⟩, ⟨"f32", "Float"⟩, ⟨"f64", "Double"⟩
   ⟨"u8", "Byte"⟩, ⟨"u16", "Short"⟩, ⟨"u32", "Integer"⟩, ⟨"u64", "Long"⟩
   ⟨"i8", "Byte"⟩, ⟨"i16", "Short"⟩, ⟨"i32", "Integer"⟩, ⟨"i64", "Long"⟩
 ]
 vectors ← •HashMap´ <˘⍉[
-  ⟨"u8", "ByteVector"⟩
-  ⟨"i8", "ByteVector"⟩
-  ⟨"u16", "ShortVector"⟩
-  ⟨"i16", "ShortVector"⟩
-  ⟨"u32", "IntVector"⟩
-  ⟨"i32", "IntVector"⟩
-  ⟨"u64", "LongVector"⟩
-  ⟨"i64", "LongVector"⟩
-  ⟨"u1", "VectorMask<?>"⟩ # extremely wrong; maybe VectorMask<?> works?
+  ⟨"u8", "ByteVector"⟩, ⟨"u16", "ShortVector"⟩, ⟨"u32", "IntVector"⟩, ⟨"u64", "LongVector"⟩
+  ⟨"i8", "ByteVector"⟩, ⟨"i16", "ShortVector"⟩, ⟨"i32", "IntVector"⟩, ⟨"i64", "LongVector"⟩
+  ⟨"f32", "FloatVector"⟩, ⟨"f64", "DoubleVector"⟩
+  ⟨"u1", "VectorMask<?>"⟩ # seems to work fine enough
 ]
 Type ← {
   ⊑(⊑𝕩)∊"uifv"? prims.Get 𝕩;

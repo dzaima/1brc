@@ -398,7 +398,6 @@ export{'core_1brc', core_1brc}
       
       def j = i * vcount{V}
       v:= load{V, arr, j}
-      
       # @for_const(i to 32) v = V~~v_eq{v,v}
       # @for_const(i to 32) v = v ^ V ** -1
       # @for_const(i to 32) v = v & (v ^ V ** -1)
@@ -413,6 +412,7 @@ export{'core_1brc', core_1brc}
       # v = pair{halves{v}}
       # v = V~~half{gather{i64, ai8, 1, v, 1}, 0}
       # v = V~~v_eq{v, v}
+      # f32~*v
       
       store{arr, j, V~~v}
     }

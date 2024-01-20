@@ -95,6 +95,8 @@ if (hasarch{'AVX2'}) {
   include 'arch/c'
   include 'arch/iintrinsic/basic'
   include 'clib/malloc'
+  def ctype{T} = merge{'(__m', fmtnat{width{T}}, match(quality{eltype{T}},elwidth{T}){ {('f'),(64)}=>'d'; {('f'),(32)}=>''; {_,_}=>'i'; }, ')'}
+  def reinterpret{R, x:X & vece{R} & vece{X} & width{R}==width{X} & R!=X & ctype{R}!=ctype{X}} = emit{R, ctype{R}, x}
   
   def popc{x:T & isint{T} & width{T}==64} = emit{ux, '__builtin_popcountll', x}
   def popc{x:T & isint{T} & width{T}<=32} = emit{ux, '__builtin_popcount', to_u32{x}}
@@ -129,10 +131,10 @@ if (hasarch{'AVX2'}) {
   def broadcast{V, e & veca{V}} = vec_broadcast{V, e}
   
   def homMask{x:T & veci{T} & ty_u{T}==[32]u8} = emit{u32, '_mm256_movemask_epi8', x}
-  def homMask{x:T & veci{T} & ty_u{T}==[16]u8} = emit{u16, '_mm_movemask_epi8', x}
-  def homMask{x:T & veci{T} & ty_u{T}==[8]u32} = emit{u8, '_mm256_movemask_ps', re_el{f32,x}}
-  def homMask{x:T & veci{T} & ty_u{T}==[4]u32} = emit{u8, '_mm_movemask_ps', re_el{f32,x}}
-  def homMask{x:T & veci{T} & ty_u{T}==[2]u64} = emit{u8, '_mm_movemask_pd', re_el{f64,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[16]u8} = emit{u32, '_mm_movemask_epi8', x}
+  def homMask{x:T & veci{T} & ty_u{T}==[8]u32} = emit{u32, '_mm256_movemask_ps', re_el{f32,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[4]u32} = emit{u32, '_mm_movemask_ps', re_el{f32,x}}
+  def homMask{x:T & veci{T} & ty_u{T}==[2]u64} = emit{u32, '_mm_movemask_pd', re_el{f64,x}}
   
   def blend{f:T, t:T, m:M & width{T}==256} = emit{T, '_mm256_blendv_epi8', f, t, m}
   def blend{f:T, t:T, m:M & width{T}==128} = emit{T, '_mm_blendv_epi8', f, t, m}
@@ -180,7 +182,7 @@ if (hasarch{'AVX2'}) {
       {(64), (4), (32)} => '_mm256_i32gather_epi64'
       {(32), (4), (64)} => '_mm256_i64gather_epi32'
       {(64), (4), (64)} => '_mm256_i64gather_epi64'
-    }, ptr + ptrOff, idxs, scale}
+    }, *void ~~ (ptr + ptrOff), idxs, scale}
   }
   
   # def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 & V==[4]u64} = { # emulate the emulated gather on java

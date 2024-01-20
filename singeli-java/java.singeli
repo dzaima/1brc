@@ -87,6 +87,8 @@ def reinterpret{R, x:X & R!=X & vece{R} & vece{X} & width{R}==width{X}} = {
     {(i16)}=>'Shorts'
     {(i32)}=>'Ints'
     {(i64)}=>'Longs'
+    {(f32)}=>'Floats'
+    {(f64)}=>'Doubles'
   }}, x}
 }
 
