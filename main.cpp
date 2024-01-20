@@ -40,21 +40,22 @@ std::string mapg_string[hash_size];
 
 
 
-std::unordered_map<std::string, int64_t*> long_entries;
-static __attribute__((noinline)) int64_t* get_data_new(std::string& k) {
-  int64_t* p = long_entries[k] = new int64_t[4]();
+std::unordered_map<std::string_view, int64_t*> long_entries;
+static __attribute__((noinline)) int64_t* get_data_new(std::string_view k) {
+  std::string* kg = new std::string(k);
+  int64_t* p = long_entries[std::string_view(kg->data(), kg->size())] = new int64_t[4]();
   p[dt_min] = -9999;
   p[dt_max] = -9999;
   return p;
 }
-static int64_t* get_data(std::string& k) {
+static int64_t* get_data(std::string_view k) {
   auto v = long_entries.find(k);
   if (RARE(v == long_entries.end())) return get_data_new(k);
   return v->second;
 }
 
 static void add_long(ux nameStart, ux nameEnd, int sample) {
-  std::string k{input+nameStart, nameEnd-nameStart};
+  std::string_view k{input+nameStart, nameEnd-nameStart};
   int64_t* map_data = get_data(k);
   
   int didx = 0;
@@ -358,7 +359,7 @@ int main(int argc, char* argv[]) {
   if (thread_stats == nullptr) {
     if (!quiet) print_stats();
   } else {
-    auto add = [&thread_stats](std::string name, int64_t* data){
+    auto add = [&thread_stats](std::string_view name, int64_t* data){
       int nlen = name.size();
       memcpy(thread_stats, name.data(), nlen);
       thread_stats+= nlen;
