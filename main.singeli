@@ -160,35 +160,8 @@ def parse_nums{buf:*i16, nums:NV8} = {
   num_off
 }
 
-
-
-def dt_sum = 0
-def dt_num = 1
-def dt_min = 2
-def dt_max = 3
-def DATA = if (is_java) i64 else i32
-fn core_1brc(
-  ident:i32,
-  bufdata:*ux,
-  
-  hash_mask:HASH, # map length (power of two), minus 1
-  
-  # indexed by masked hash
-  map_exp:*i8,    # chunks of exp_bulk
-  map_hash:*HASH, # full hash
-  map_data:*DATA, # chunks of 4, offsets are dt_*
-  
-  inp:*i8,
-  inpOff:ux
-) : void = @withbufs(object_arr) {
-  def takes = takes0{bulk}
-  
-  def ri = range{interleaved}
-  def bufstart{i} = i * bufmax2
-  def bufcs = each{new{ux}, each{bufstart, ri}}
-  bufEnds:*ux = object_arr{ux, interleaved}
-  
-  # semicolon search
+def ri = range{interleaved}
+def semisearch{takes, inp, inpOff, bufdata, bufcs} = {
   def inpcs = each{{i} => new{inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
     def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
@@ -217,6 +190,34 @@ fn core_1brc(
       inpc+= bulk*interleaved
     }, ri, ms0, ms, bufcs, inpcs}
   }
+}
+
+def dt_sum = 0
+def dt_num = 1
+def dt_min = 2
+def dt_max = 3
+def DATA = if (is_java) i64 else i32
+fn core_1brc(
+  ident:i32,
+  bufdata:*ux,
+  
+  hash_mask:HASH, # map length (power of two), minus 1
+  
+  # indexed by masked hash
+  map_exp:*i8,    # chunks of exp_bulk
+  map_hash:*HASH, # full hash
+  map_data:*DATA, # chunks of 4, offsets are dt_*
+  
+  inp:*i8,
+  inpOff:ux
+) : void = @withbufs(object_arr) {
+  def takes = takes0{bulk}
+  
+  def bufstart{i} = i * bufmax2
+  def bufcs = each{new{ux}, each{bufstart, ri}}
+  bufEnds:*ux = object_arr{ux, interleaved}
+  
+  semisearch{takes, inp, inpOff, bufdata, bufcs}
   
   
   
