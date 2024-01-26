@@ -40,7 +40,7 @@ static uint32_t si_f2_hash_1brc_short(int8_t* v0_arr) {
   return v15;
 }
 
-static uint64_t si_f3_info_1brc_long(int8_t* v0_ptr) {
+static uint32_t si_f3_hash_1brc_long(int8_t* v0_ptr) {
   uint64_t v1_start = ((uint64_t)0ull) + ((uint64_t)32ull);
   __m256i v2_hashv = _mm256_set1_epi8(((int8_t)0ll));
   bool v3_cont = ((bool)1ull);
@@ -88,11 +88,7 @@ l2:;
   __m128i v31 = v23_hv;
   int32_t v32 = _mm_extract_epi32(v31, 0);
   uint32_t v33 = (uint32_t)v32;
-  uint64_t v34 = -(v1_start);
-  uint64_t v35 = (uint64_t)v33;
-  uint64_t v36 = v35 << ((uint64_t)32ull);
-  uint64_t v37 = v34 | v36;
-  return v37;
+  return v33;
 }
 
 static void si_f4_core_1brc_0(int32_t v0_ident, uint64_t* v1_bufdata, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
@@ -977,7 +973,7 @@ uint64_t (*const core_1brc_periter)() = si_f1_core_1brc_periter;
 
 uint32_t (*const hash_1brc_short)(int8_t*) = si_f2_hash_1brc_short;
 
-uint64_t (*const info_1brc_long)(int8_t*) = si_f3_info_1brc_long;
+uint32_t (*const hash_1brc_long)(int8_t*) = si_f3_hash_1brc_long;
 
 void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f4_core_1brc_0;
 

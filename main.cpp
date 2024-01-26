@@ -110,11 +110,8 @@ static void add_long(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int64_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int64_t)sample);
 }
-static uint32_t long_hash(char* ptr) {
-  return info_1brc_long((int8_t*)ptr)>>32;
-}
 static void add_long(ux nameStart, ux nameEnd, int sample) {
-  add_long(nameStart, nameEnd, sample, long_hash(input+nameEnd));
+  add_long(nameStart, nameEnd, sample, hash_1brc_long((int8_t*)(input+nameEnd)));
 }
 
 static char name_buf[512];
@@ -123,7 +120,7 @@ static void merge_ent(std::string k, int64_t* new_data) {
   char* start = end - k.size();
   start[0] = 10;
   memcpy(start+1, k.data(), k.size());
-  int64_t* map_data = get_data(k, long_hash(end));
+  int64_t* map_data = get_data(k, hash_1brc_long((int8_t*)end));
   
   map_data[dt_sum]+= new_data[dt_sum];
   map_data[dt_num]+= new_data[dt_num];

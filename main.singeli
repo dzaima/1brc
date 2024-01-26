@@ -119,11 +119,11 @@ def info_long{inp, end} = {
 }
 
 (if (not is_java) {
-  fn info_1brc_long(ptr:*i8) = {
+  fn hash_1brc_long(ptr:*i8) = {
     def {start, hash} = info_long{ptr, ux~~0}
-    promote{u64,-start} | promote{u64,hash}<<32
+    hash
   }
-  export{'info_1brc_long', info_1brc_long}
+  export{'hash_1brc_long', hash_1brc_long}
 })
 
 
