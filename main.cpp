@@ -29,6 +29,7 @@ bool expanded_map = false;
   #define STAT_INC(N,d) stat_##N+= d
   long long stat_fs_cam, stat_fs_new, stat_fs_ndsum; // failed_short call amount, count of successful inserts, and sum of delta of those
   long long stat_fl_cam, stat_fl_gdsum, stat_fl_ndsum; // failed_long (or, really, get_data) call amount, get delta sum, insert delta sum
+  long long stat_fl_far; // failed_long more than 8 collisions
 #else
   #define STAT_INC(...)
 #endif
@@ -69,7 +70,7 @@ struct slow_ent {
   int64_t data[4];
 };
 
-constexpr uint32_t slow_mask = 0x1fff; // less than 10k, but slow_size adds a buffer
+constexpr uint32_t slow_mask = 0xfff; // less than 10k, but slow_size adds a buffer
 constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having hash 0xffff, plus a buffer for overread
 
 uint32_t slow_hash[slow_size]; // if 0, empty
@@ -129,6 +130,7 @@ static int64_t* get_data(std::string_view k, uint32_t hash) {
       ux none = vec_find32(hashes, 0);
       if (RARE(none!=0)) return get_data_new(k, hash, idx + __builtin_ctz(none));
       idx+= 8;
+      STAT_INC(fl_far, 1);
     }
   }
 }
@@ -451,7 +453,8 @@ int main(int argc, char* argv[]) {
     printf("[t%d] processed row count: %lld\n", thread_n, (long long)n);
     printf("[t%d] short map: %4lld entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n,     stat_fs_new, stat_fs_cam, stat_fs_cam*100.0/n, stat_fs_ndsum*1.0/stat_fs_new);
     printf("; misses: %lld (%.4g%%)\n", stat_fs_cam-stat_fs_new, (stat_fs_cam-stat_fs_new)*100.0/n);
-    printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g\n", thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
+    printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
+    printf("; far: %lld (%.4g%%)\n", stat_fl_far, stat_fl_far*100.0/stat_fl_cam);
     
     // printf("short map occupancy: "); for (int i = 0; i < hash_size(); i++) printf("%c", mapg_hash[i]==def_hash(i)? '.' : '#'); printf("\n");
     // printf("slow map occupancy: "); for (int i = 0; i < slow_size; i++) printf("%c", slow_hash[i]==0? '.' : '#'); printf("\n");
