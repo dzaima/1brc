@@ -1,5 +1,6 @@
 #include "header.h"
 
+#include <immintrin.h>
 #include <cinttypes>
 #include <climits>
 #include <cmath>
@@ -36,6 +37,7 @@ constexpr bool global_mmap = false;
 int num_threads = 8;
 static int thread_n = 0; // current thread number
 #define RARE(X) __builtin_expect(X, 0)
+#define LIKELY(X) __builtin_expect(X, 1)
 #define assert(X) ({ if (!(X)) abort(); })
 
 // copied from main.singeli:
@@ -75,6 +77,19 @@ slow_ent slow_table[slow_size];
 uint32_t slow_filled_idxs[10000]; // for iterations over the slow table to be faster
 ux slow_count = 0;
 
+uint8_t name_not[256];
+static __m256i loadu(const char* ptr) { return _mm256_loadu_si256((__m256i*)ptr); }
+static bool eqname(const char* a, const char* b, ux n) {
+  // return memcmp(a,b,n)==0;
+  char* mask_start = (char*)(name_not+128-n);
+  __m256i ok0 = _mm256_cmpeq_epi8(loadu(a   ), loadu(b   )) | loadu(mask_start);
+  __m256i ok1 = _mm256_cmpeq_epi8(loadu(a+32), loadu(b+32)) | loadu(mask_start+32);
+  __m256i ok2 = _mm256_cmpeq_epi8(loadu(a+64), loadu(b+64)) | loadu(mask_start+64);
+  __m256i ok3 = _mm256_cmpeq_epi8(loadu(a+96), loadu(b+96)) | loadu(mask_start+96);
+  __m256i ok =              _mm256_and_si256(ok0,ok1);
+  ok = _mm256_and_si256(ok, _mm256_and_si256(ok2,ok2));
+  return _mm256_movemask_epi8(ok) == 0xffffffff;
+}
 
 static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint32_t hash, uint32_t idx) {
   STAT_INC(fl_ndsum, idx - (hash & slow_mask));
@@ -82,7 +97,9 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   slow_hash[idx] = hash;
   
   slow_ent& r = slow_table[idx];
-  r.name = (new std::string(k))->data();
+  r.name = (char*)calloc(128, 1);
+  memcpy(r.name, k.data(), k.size());
+  r.name[k.size()] = 0;
   r.name_len = k.size();
   r.data[dt_min] = -9999;
   r.data[dt_max] = -9999;
@@ -98,7 +115,7 @@ static int64_t* get_data(std::string_view k, uint32_t hash) {
     if (RARE(found == 0)) return get_data_new(k, hash, idx);
     if (found == hash) {
       slow_ent& r = slow_table[idx];
-      if (r.name_len == len && memcmp(r.name, k.data(), len)==0) {
+      if (LIKELY(r.name_len == len) && LIKELY(eqname(r.name, k.data(), len))) {
         STAT_INC(fl_gdsum, idx - (hash & slow_mask));
         return r.data;
       }
@@ -273,6 +290,7 @@ void print_stats() {
 }
 
 int main(int argc, char* argv[]) {
+  for (ux i = 128; i < 256; i++) name_not[i] = 0xff;
   char* num_str = std::getenv("THREADS_1BRC");
   if (num_str!=nullptr) num_threads = atoi(num_str);
   

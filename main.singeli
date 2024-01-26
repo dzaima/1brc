@@ -73,7 +73,7 @@ export{'core_1brc_periter', core_1brc_periter}
 tail_mask_16:*i8 = merge{16**0, 16 ** -1}; def tail_mask_v{(16)} = tail_mask_16
 tail_mask_32:*i8 = merge{32**0, 32 ** -1}; def tail_mask_v{(32)} = tail_mask_32
 def tail_mask{T, i} = load{T, tail_mask_v{vcount{T}}, i}
-def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3243,0xf6a9,0x885b,0x308d,0x3131,0x98a3,0xe037,0x0734}
+def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d,0x3131,0x99a3,0xe137,0x0734}
 
 
 
