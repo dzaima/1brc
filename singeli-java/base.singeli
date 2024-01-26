@@ -75,7 +75,7 @@ def withbufs{vars,begin==0,G,iter} = withenv{'make_buf', G, {} => iter{'!', vars
 
 
 # vector things
-def {halves,madd,l128shrb,unpack128}
+def {halves,madd,l128shrb,unpack128,sel}
 oper === full_eq infix none 20
 oper !== full_ne infix none 20
 def elwidth{T} = width{eltype{T}}

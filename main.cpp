@@ -68,6 +68,7 @@ ALIGN std::string mapg_string[hash_size_max];
 struct slow_ent {
   char* name;
   ux name_len;
+  // char pad[16];
   int64_t data[4];
 };
 
