@@ -85,9 +85,9 @@ static bool eqname(const char* a, const char* b, ux n) {
   __m256i ok0 = _mm256_cmpeq_epi8(loadu(a   ), loadu(b   )) | loadu(mask_start);
   __m256i ok1 = _mm256_cmpeq_epi8(loadu(a+32), loadu(b+32)) | loadu(mask_start+32);
   __m256i ok2 = _mm256_cmpeq_epi8(loadu(a+64), loadu(b+64)) | loadu(mask_start+64);
-  __m256i ok3 = _mm256_cmpeq_epi8(loadu(a+96), loadu(b+96)) | loadu(mask_start+96);
-  __m256i ok =              _mm256_and_si256(ok0,ok1);
-  ok = _mm256_and_si256(ok, _mm256_and_si256(ok2,ok2));
+  if (RARE(n>=96)) ok2 = _mm256_and_si256(ok2,
+                _mm256_cmpeq_epi8(loadu(a+96), loadu(b+96)) | loadu(mask_start+96));
+  __m256i ok = _mm256_and_si256(_mm256_and_si256(ok0,ok1), ok2);
   return _mm256_movemask_epi8(ok) == 0xffffffff;
 }
 
@@ -139,7 +139,7 @@ static void add_long(ux nameStart, ux nameEnd, int sample) {
 }
 
 static char name_buf[512];
-static void merge_ent(std::string k, int64_t* new_data) {
+static void merge_ent(std::string_view k, int64_t* new_data) {
   char* end = name_buf+512;
   char* start = end - k.size();
   start[0] = 10;
@@ -352,7 +352,7 @@ int main(int argc, char* argv[]) {
       while (*curr != ';') {
         char* name_start = curr;
         while (*curr != ';') curr++;
-        std::string name{name_start, (size_t)(curr-name_start)};
+        std::string_view name{name_start, (size_t)(curr-name_start)};
         curr++;
         
         int64_t* data = new int64_t[4];
