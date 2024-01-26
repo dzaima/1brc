@@ -1,4 +1,5 @@
 include 'singeli-java/base'
+include 'util/functionize'
 
 def bulk = 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
@@ -263,8 +264,11 @@ def parse_nums{buf:*i16, nums:NV8} = {
   num_off
 }
 
+def bufstart{i} = i * bufmax2
+
 def ri = range{interleaved}
-def semisearch{takes, inp, inpOff, bufdata, bufcs} = {
+def semisearch{takes}{inp, inpOff, bufdata, bufEnds} = {
+  def bufcs = each{new{ux}, each{bufstart, ri}}
   def inpcs = each{{i} => new{inpOff + i*bulk}, ri}
   @for(i to iter_count{bulk}) {
     def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
@@ -293,6 +297,9 @@ def semisearch{takes, inp, inpOff, bufdata, bufcs} = {
       inpc+= bulk*interleaved
     }, ri, ms0, ms, bufcs, inpcs}
   }
+  each{store{bufEnds, ., .}, ri, bufcs}
+  fn please_void():void={}
+  please_void()
 }
 
 def dt_sum = 0
@@ -316,26 +323,26 @@ fn core_1brc{branchless_fail}(
 ) : void = @withbufs(object_arr) {
   def takes = takes0{bulk}
   
-  def bufstart{i} = i * bufmax2
-  def bufcs = each{new{ux}, each{bufstart, ri}}
   bufEnds:*ux = object_arr{ux, interleaved}
   
-  semisearch{takes, inp, inpOff, bufdata, bufcs}
+  # semisearch{takes}{inp, inpOff, bufdata, bufcs}
+  functionize{semisearch{takes}}{inp, inpOff, bufdata, bufEnds}
+  def bufEnd{i} = load{bufEnds, i}
   
   
   
   # preparation for core loop
   semi:ux = 0
-  each{{i, bufc} => { # find the location of a semicolon
+  each{{i} => { # find the location of a semicolon
     def buf0 = bufstart{i}
-    if (buf0 != bufc) semi = load{bufdata, buf0}
-  }, ri, bufcs}
-  each{{i, bufc} => {
-    store{bufEnds, i, bufc}
+    if (buf0 != bufEnd{i}) semi = load{bufdata, buf0}
+  }, ri}
+  each{{i} => {
     # set read-past-the-end indices to an invalid (0-char) name
     # won't be found in hashtable, and then to_fail will discard it
-    @for_const(i to proc_bulk) store{bufdata, bufc+i, semi+1}
-  }, ri, bufcs}
+    pos:= bufEnd{i}
+    @for_const(j to proc_bulk) store{bufdata, pos+j, semi+1}
+  }, ri}
   
   
   

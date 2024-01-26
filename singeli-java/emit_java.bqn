@@ -120,6 +120,7 @@ EmitFn ← { 𝕊:
           "^boolpromote": ∾⟨'(', retty, ") (", Arg 5⊑ps, "?1:0)"⟩;
           ∾⟨𝕩, Args 5↓ps⟩
         } ¯1↓1↓4⊑ps;
+        "call": ∾⟨CallName 1↓4⊑ps, Args 6↓ps⟩;
         !𝕩
       } 2⊑ps
       
@@ -164,6 +165,7 @@ fnNameMap ← {
   "Cannot export function by multiple names in Java" ! ∧´∊k
   k •HashMap v
 }
+CallName ← {𝕊n: {fnNameMap.Has 𝕩? fnNameMap.Get 𝕩; n} '$'∾n}
 
 fnIR ← @
 fnLine ← @
@@ -171,8 +173,7 @@ lnsSplit { ps𝕊wholeLine:
   {
     "beginFn":
       fnIR ↩ ⟨⟩
-      name ← 1⊑ps
-      name ↩ {fnNameMap.Has 𝕩? fnNameMap.Get 𝕩; name} '$'∾name
+      name ← CallName 1⊑ps
       fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", name, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
       ;
     "endFn":
