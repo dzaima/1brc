@@ -96,15 +96,13 @@ def hash_vec{x:V & eltype{V}==i8} = { # hash each 128-bit lane
 fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
 export{'hash_1brc_short', hash_1brc_short}
 
-def probe{{hash_mask, map_hash}} = {
-  def probe_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
-  def me{hash:(HASH)} = probe_raw{hash, cast_i{ux, hash&hash_mask}}
-}
+def probe_raw{{hash_mask, map_hash}, hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
+def probe{state, hash:(HASH)} = probe_raw{state, hash, cast_i{ux, hash & select{state,0}}}
 
 def hash_vecs{state, vs} = {
   def {hash_mask, map_hash} = state
   def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
-  def probe_one{h} = probe{state}{h}
+  def probe_one{h} = probe{state, h}
   
   def probe_each{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
     idxv:= hv & hash_mask
@@ -136,11 +134,7 @@ def hash_vecs{state, {a:T,b:T if width{T}==256} if not is_java} = {
   def els = tup{0,2,1,3}
   def me{T_idxs, separate_idxs} = {
     def idxs0 = each{extract{r,.}, 2*els}
-    def r = each{probe{state}, idxs0}
-    # lprintf{'raw: ', idxs0}
-    # lprintf{'res: ', r}
-    # lprintf{'alt: ', hash_vecs{state, merge{halves{a},halves{b}}}{[16]i8, 1}}
-    r
+    each{probe{state,.}, idxs0}
   }
 }
 
