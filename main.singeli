@@ -85,6 +85,7 @@ def hash_vec64{x:V & eltype{V}==HASH} = { # hash each 64-bit lane, each such bei
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
   hv # &{u32} 255 # for testing hash collision behavior
+  # hv |{i32} -256
 }
 def hash_vec{x:V & eltype{V}==i8} = { # hash each 128-bit lane
   def HX = HASH~*V
