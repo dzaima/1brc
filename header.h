@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+#define OFENCE_G(X) ({ __auto_type x_ = (X); __asm__("" : "=r"(x_) : "0"(x_)); x_; })
+#define OFENCE_V(X) ({ __auto_type x_ = (X); __asm__("" : "=x"(x_) : "0"(x_)); x_; })
+
 #ifdef __cplusplus
 extern "C" {
 #endif

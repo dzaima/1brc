@@ -105,8 +105,13 @@ def mask_newline{v:T & T==[32]i8} = {
 # def mask_newline{v:T & T==[32]i8} = pair{each{mask_newline, halves{v}}}
 def mask_newline{v:T & T==[16]i8} = {
   mc:= homMask{v == 10}
+  def mw = width{type{mc}}
+  def d = mw - exp_bulk
   c:ux = exp_bulk
   if (likely{mc!=0}) c = clz{exp_bulk, mc}
+  # c:ux = exp_bulk + d
+  # if (likely{mc!=0}) c = clz{mw, mc}
+  # c = ofence{c} - d
   v & load{T, tail_mask, c}
 }
 
@@ -257,10 +262,10 @@ fn core_1brc(
           G{load{VX, inp, off-exp_bulk}}
         }
         if (is_java or n==1) {
-          def parts = for_vs{mask_newline}
+          def parts = each{ofence, for_vs{mask_newline}}
           tup{parts, pair{parts}}
         } else {
-          def total = mask_newline{pair{for_vs{{x}=>x}}}
+          def total = ofence{mask_newline{pair{for_vs{{x}=>x}}}}
           tup{halves{total}, total}
         }
       }
@@ -302,9 +307,11 @@ fn core_1brc(
           def p = tup{map_data, dataoff+k}
           store{...p, G{load{...p}}}
         }
+        
         if (is_java) upd{dt_min, __min{., temp}}
         else         upd{dt_min, __max{., -temp}}
         upd{dt_max, __max{., temp}}
+        
         upd{dt_sum, {v} => v + temp}
         upd{dt_num, {v} => v + 1}
       }

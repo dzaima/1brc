@@ -110,6 +110,10 @@ if (hasarch{'AVX2'}) {
   def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
   def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}
   
+  # optimization fences
+  def ofence{x:T if isprim{T}} = emit{T, 'OFENCE_G', x}
+  def ofence{x:T if vece{T}} = emit{T, 'OFENCE_V', x}
+  
   def static_arr{E, n} = undefined{E, n}
   def static_arr{E, vs & ktup{vs}} = { buf:*E = vs; buf }
   def object_arr = static_arr
@@ -198,6 +202,7 @@ if (hasarch{'AVX2'}) {
   setpackage{'gen'}
   def rare{x} = x
   def likely{x} = x
+  def ofence{x if is_java} = x
   def local_new{T, n} = emit{*T, '^newarray', n}
 }
 def widen{E, x:V & E == eltype{V}} = x
