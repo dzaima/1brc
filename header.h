@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+#if !__has_builtin(__builtin_unpredictable)
+  #define __builtin_unpredictable(x) x
+#endif
 
 #define hash_mask_max 0x7fff
 
