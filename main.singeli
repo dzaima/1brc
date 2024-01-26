@@ -3,7 +3,7 @@ include 'util/functionize'
 
 def bulk = 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
-def interleaved = 4 # number of semicolon searches to interleave
+def interleaved = 3 # number of semicolon searches to interleave
 def bufmax = 1000
 def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
@@ -206,11 +206,12 @@ def mask_newline{v:T & T==[16]i8} = {
   mc:= homMask{v == 10}
   def mw = width{type{mc}}
   def d = mw - exp_bulk
-  c:ux = exp_bulk
-  if (likely{mc!=0}) c = clz{exp_bulk, mc}
-  # c:ux = exp_bulk + d
-  # if (likely{mc!=0}) c = clz{mw, mc}
-  # c = ofence{c} - d
+  
+  c:= undefined{ux}
+  if (likely{mc!=0}) c = clz{mw, mc}
+  else c = exp_bulk + d
+  c = ofence{c} - d
+  
   v & tail_mask{T, c}
 }
 
