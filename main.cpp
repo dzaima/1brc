@@ -19,7 +19,6 @@
 typedef uint64_t ux;
 
 // hash table size minus one; start out small, expand to big one on a bunch of collisions
-constexpr uint32_t hash_mask_max = 0xffff;
 uint32_t hash_mask = 0xfff;
 bool expanded_map = false;
 #ifndef DEBUG
@@ -71,7 +70,7 @@ struct slow_ent {
 };
 
 constexpr uint32_t slow_mask = 0xfff; // less than 10k, but slow_size adds a buffer
-constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having hash 0xffff, plus a buffer for overread
+constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having max hash, plus a buffer for overread
 
 uint32_t slow_hash[slow_size]; // if 0, empty
 slow_ent slow_table[slow_size];
@@ -302,7 +301,6 @@ void print_stats() {
 }
 
 int main(int argc, char* argv[]) {
-  static_assert(hash_size_max-1 == 0xffff+4);
   for (ux i = 128; i < 256; i++) name_not[i] = 0xff;
   char* num_str = std::getenv("THREADS_1BRC");
   if (num_str!=nullptr) num_threads = atoi(num_str);

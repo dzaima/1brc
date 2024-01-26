@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+
+#define hash_mask_max 0xffff
+
 #define OFENCE_G(X) ({ __auto_type x_ = (X); __asm__("" : "=r"(x_) : "0"(x_)); x_; })
 #define OFENCE_V(X) ({ __auto_type x_ = (X); __asm__("" : "=x"(x_) : "0"(x_)); x_; })
 #define CMOV_DAMMIT(COND, T, F) ({ __auto_type r_ = (F); asm volatile ("  test %2, %2\n  cmovne %1, %0" : "+r" (r_) : "r" (T), "r" (COND) : "cc"); r_; })
