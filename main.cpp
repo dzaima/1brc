@@ -21,6 +21,7 @@ typedef uint64_t ux;
 // hash table size minus one; start out small, expand to big one on a bunch of collisions
 constexpr uint32_t hash_mask_max = 0xffff;
 uint32_t hash_mask = 0xfff;
+bool expanded_map = false;
 #ifndef DEBUG
   #define DEBUG 0
 #endif
@@ -48,7 +49,7 @@ constexpr int dt_num = 1;
 constexpr int dt_min = 2;
 constexpr int dt_max = 3;
 
-constexpr ux hash_size_max = hash_mask_max + hashv_count;
+constexpr ux hash_size_max = hash_mask_max + hashv_count + 1; // 1 reserved as placeholder for branchless writes
 static ux hash_size() { return hash_mask + hashv_count; }
 char exp_zeroes[exp_bulk];
 
@@ -172,11 +173,12 @@ extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, uint32_t hash
     
     if (++idx == hashm + (ux)hashv_count) { // too many collisions, fall back to long map
       // if (DEBUG) printf("[t%d] super-failed short on hash %u/%u\n", thread_n, hashm, hash);
-      if (hash_mask == hash_mask_max) {
+      if (expanded_map) {
         add_long(nameStart, nameEnd, sample);
       } else {
         if (DEBUG) printf("[t%d] too many collisions! expanding\n", thread_n);
         hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
+        expanded_map = true;
         failed_short(nameStart, nameEnd, sample, hash); // try short path again, why not
       }
       return;
@@ -209,7 +211,7 @@ ux periter;
 ux* core_buf;
 
 static void call_core(ux start) {
-  core_1brc(
+  (expanded_map? core_1brc_branchless_fail : core_1brc)(
     0, core_buf,
     hash_mask,
     mapg_exp, mapg_hash, mapg_data,
@@ -290,6 +292,7 @@ void print_stats() {
 }
 
 int main(int argc, char* argv[]) {
+  static_assert(hash_size_max-1 == 0xffff+4);
   for (ux i = 128; i < 256; i++) name_not[i] = 0xff;
   char* num_str = std::getenv("THREADS_1BRC");
   if (num_str!=nullptr) num_threads = atoi(num_str);

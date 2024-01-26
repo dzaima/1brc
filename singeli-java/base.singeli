@@ -25,6 +25,21 @@ def can_promote{R, x} = knum{x}
 def can_promote{R, x:X} = X <= R
 local def indexof{vs, x} = { def {r} = indices{each{__eq{x,.}, vs}}; r }
 
+def ofence{x if not hastype{x}} = x
+def cmov{cond, t, f} = if(cond) t else f
+local def tyboth{a, b} = if (hastype{a}) type{a} else type{b}
+def cmov{cond, t, f if not knum{cond}} = {
+  def T = tyboth{t, f}
+  r:T = f
+  if (unpredictable{cond}) r = t
+  r
+  # r:T = ofence{promote{T,f}}
+  # def t2 = ofence{promote{T,t}}
+  # if (unpredictable{cond}) r = t2
+  # ofence{r}
+  # t ^ ((t^f) & -promote{T, cond})
+}
+
 def truncBits{n, v & n<=8}  = cast_i{u8, v}
 def truncBits{n, v & n==16} = cast_i{u16, v}
 def truncBits{n, v & n==32} = cast_i{u32, v}
@@ -109,10 +124,15 @@ if (hasarch{'AVX2'}) {
   
   def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
   def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}
+  def unpredictable{x:u1} = emit{u1, '__builtin_unpredictable', x}
   
   # optimization fences
   def ofence{x:T if isprim{T}} = emit{T, 'OFENCE_G', x}
   def ofence{x:T if vece{T}} = emit{T, 'OFENCE_V', x}
+  def cmov{cond, t, f if not knum{cond}} = {
+    def T = tyboth{t,f}
+    emit{T, 'CMOV_DAMMIT', cond, T~~t, T~~f}
+  }
   
   def static_arr{E, n} = undefined{E, n}
   def static_arr{E, vs & ktup{vs}} = { buf:*E = vs; buf }
@@ -202,6 +222,7 @@ if (hasarch{'AVX2'}) {
   setpackage{'gen'}
   def rare{x} = x
   def likely{x} = x
+  def unpredictable{x} = x
   def ofence{x if is_java} = x
   def local_new{T, n} = emit{*T, '^newarray', n}
 }

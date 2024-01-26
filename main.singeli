@@ -7,6 +7,7 @@ def bufmax = 1000
 def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
 def HASHV = [4]HASH # buckets to search
+def placeholder_idx = 0xffff + vcount{HASHV}
 
 # shift down by n bytes in the low 8 bytes of each 128-bit lane
 def l128_shrb8{a:V, n} = l128shrb{a,n} # unused as-is, but could be better on some architectures
@@ -335,15 +336,15 @@ fn core_1brc{branchless_fail}(
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
-      def to_fail{ij} = { # didn't find ij'th record in map
+      def store_fail{ij, fail} = { # didn't find ij'th record in map
         if (rare{ij >= bufE-bufS}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
-        failposC+= 2
+        
+        failposC+= promote{ux,fail}<<1 # cmov{fail, 2, ux~~0}
       }
-      def update{ij, idx} = { # found ij'th record at map index idx
-        dataoff:= idx*4
+      def update{ij, dataoff} = { # found ij'th record at map index idx
         temp:= promote{DATA, get_temp{ij}}
         def upd{k, G} = {
           def p = tup{map_data, dataoff+k}
@@ -398,8 +399,14 @@ fn core_1brc{branchless_fail}(
       
       # updating
       each{{ij, idx, got, exp} => {
-        if (likely{got === exp}) update{ij, idx}
-        else to_fail{ij}
+        if (branchless_fail) {
+          def bad = unpredictable{got !== exp}
+          store_fail{ij, bad}
+          update{ij, cmov{bad, placeholder_idx*4, idx*4}}
+        } else {
+          if (likely{got === exp}) update{ij, idx*4}
+          else store_fail{ij, 1}
+        }
       }, range{proc_bulk}, idxs, join{partss}, exps}
       
       if (one and ++retctr >= 7) return{}
@@ -432,6 +439,7 @@ fn core_1brc{branchless_fail}(
   }
 }
 export{'core_1brc', core_1brc{0}}
+(if (not is_java) export{'core_1brc_branchless_fail', core_1brc{1}})
 
 (if (is_java or playground) {
   fn minibench(ai8:*i8, ai16:*i16, ai32:*i32, ai64:*i64) : void = @withbufs(object_arr) {
