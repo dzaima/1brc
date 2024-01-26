@@ -74,27 +74,38 @@ export{'core_1brc_periter', core_1brc_periter}
 tail_mask_16:*i8 = merge{16**0, 16 ** -1}; def tail_mask_v{(16)} = tail_mask_16
 tail_mask_32:*i8 = merge{32**0, 32 ** -1}; def tail_mask_v{(32)} = tail_mask_32
 def tail_mask{T, i} = load{T, tail_mask_v{vcount{T}}, i}
-def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d,0x3131,0x99a3,0xe137,0x0734}
+def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d}
+# def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d,0x3131,0x99a3,0xe137,0x0734}
 
 
-
-def hash_vec{x:V & eltype{V}==i8} = {
-  def HX = HASH~*V
-  hv:= HX~~x
+def hash_vec64{x:V & eltype{V}==HASH} = { # hash each 64-bit lane, each such being high64^low64
+  hv:= x
   if (not is_java) hv = mix{hv}
-  hv^= l128_upper_u64{hv}
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
-  # hv = HX~~madd{i16~*hv, i16~*hv}
   hv # &{u32} 255 # for testing hash collision behavior
 }
+def hash_vec{x:V & eltype{V}==i8} = { # hash each 128-bit lane
+  def HX = HASH~*V
+  hv:= HX~~x
+  # if (not is_java) hv = mix{hv}
+  hv^= l128_upper_u64{hv}
+  hash_vec64{hv}
+}
+fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
+export{'hash_1brc_short', hash_1brc_short}
 
-def hash_vecs{hash_mask, map_hash, VX, vs} = {
+def probe{{hash_mask, map_hash}} = {
+  def probe_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
+  def me{hash:(HASH)} = probe_raw{hash, cast_i{ux, hash&hash_mask}}
+}
+
+def hash_vecs{state, vs} = {
+  def {hash_mask, map_hash} = state
   def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
-  def get_idx_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
-  def get_idx{hash:(HASH)} = get_idx_raw{hash, cast_i{ux, hash&hash_mask}}
+  def probe_one{h} = probe{state}{h}
   
-  def get_idxs{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
+  def probe_each{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
     idxv:= hv & hash_mask
     idxs:= each{cast_i{ux,.}, extract_hashes{idxv}}
     hashes:= pair{each{load{HASHV, map_hash, .}, idxs}}
@@ -110,21 +121,27 @@ def hash_vecs{hash_mask, map_hash, VX, vs} = {
     }
     idxs
   }
-  def get_idxs{hv:(HASH~*VX)} = tup{get_idx{extract{hv, 0}}}
+  def probe_each{hv:(HASH~*[exp_bulk]i8)} = tup{probe_one{extract{hv, 0}}}
   
   def r = each{hash_vec, vs}
   def me{T_idxs, separate_idxs} = {
-    if (separate_idxs) join{each{get_idxs, r}}
-    else each{get_idx, join{each{extract_hashes, r}}}
+    if (separate_idxs) join{each{probe_each, r}}
+    else each{probe_one, join{each{extract_hashes, r}}}
   }
 }
 
-# def hash_vecs{hash_mask, map_hash, VX, {a:T,b:T & width{T}==256}} = {
-#   1
-# }
-
-fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
-export{'hash_1brc_short', hash_1brc_short}
+def hash_vecs{state, {a:T,b:T if width{T}==256} if not is_java} = {
+  def r = hash_vec64{HASH ~* __xor{...unpack128{a,b}}}
+  def els = tup{0,2,1,3}
+  def me{T_idxs, separate_idxs} = {
+    def idxs0 = each{extract{r,.}, 2*els}
+    def r = each{probe{state}, idxs0}
+    # lprintf{'raw: ', idxs0}
+    # lprintf{'res: ', r}
+    # lprintf{'alt: ', hash_vecs{state, merge{halves{a},halves{b}}}{[16]i8, 1}}
+    r
+  }
+}
 
 
 
@@ -387,7 +404,7 @@ fn core_1brc{branchless_fail}(
       } else tup{
         # Native
         1, # loadn
-        [16]i8, # T_hvs
+        [32]i8, # T_hvs
         [16]i8, # T_idxs
         1, # separate_idxs; alternative impl of T_idxs
       }
@@ -401,7 +418,7 @@ fn core_1brc{branchless_fail}(
       def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
       def r_masked = mk{{} => mk{totals}{[32]i8}, {} => join{partss}}
       
-      def r_hvs = hash_vecs{hash_mask, map_hash, VX, r_masked{T_hvs}}
+      def r_hvs = hash_vecs{tup{hash_mask,map_hash}, r_masked{T_hvs}}
       def idxs = r_hvs{T_idxs, separate_idxs}
       
       def exps = each{get_exp, idxs}
