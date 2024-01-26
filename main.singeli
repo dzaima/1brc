@@ -70,6 +70,11 @@ fn core_1brc_periter() : ux = periter
 export{'core_1brc_buf_elts', core_1brc_buf_elts}
 export{'core_1brc_periter', core_1brc_periter}
 
+tail_mask_16:*i8 = merge{16**0, 16 ** -1}; def tail_mask_v{(16)} = tail_mask_16
+tail_mask_32:*i8 = merge{32**0, 32 ** -1}; def tail_mask_v{(32)} = tail_mask_32
+def tail_mask{T, i} = load{T, tail_mask_v{vcount{T}}, i}
+
+
 
 def hash_vec{x:V & eltype{V}==i8} = {
   def HX = HASH~*V
@@ -81,10 +86,47 @@ def hash_vec{x:V & eltype{V}==i8} = {
   hv # &{u32} 255 # for testing hash collision behavior
 }
 
-fn hash_1brc(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
-export{'hash_1brc', hash_1brc}
+fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
+export{'hash_1brc_short', hash_1brc_short}
 
-tail_mask:*i8 = merge{exp_bulk**0, exp_bulk ** -1}
+
+
+def info_long{inp, end} = {
+  def should_hash = not is_java
+  def lbulk = bulk
+  def VL = [lbulk]i8
+  start:= end+lbulk
+  hashv:= if (should_hash) VL**0 else i32~~0
+  cont:u1 = 1
+  do {
+    start-= lbulk
+    def v = load{VL, inp, start-lbulk}
+    m:= homMask{v == 10}
+    cont = m==0
+    if (cont) {
+      if (should_hash) hashv^= v
+    } else {
+      c:= clz{lbulk, m}
+      start-= c
+      if (should_hash) hashv^= v & tail_mask{VL, c}
+    }
+  } while (cont)
+  tup{
+    start,
+    if (should_hash) extract{hash_vec{if (lbulk==32) fold{^, halves{hashv}} else hashv}, 0}
+    else 0
+  }
+}
+
+(if (not is_java) {
+  fn info_1brc_long(ptr:*i8) = {
+    def {start, hash} = info_long{ptr, ux~~0}
+    promote{u64,-start} | promote{u64,hash}<<32
+  }
+  export{'info_1brc_long', info_1brc_long}
+})
+
+
 
 def mask_newline{v:T & T==[32]i8} = {
   def V64 = u64~*T
@@ -112,7 +154,7 @@ def mask_newline{v:T & T==[16]i8} = {
   # c:ux = exp_bulk + d
   # if (likely{mc!=0}) c = clz{mw, mc}
   # c = ofence{c} - d
-  v & load{T, tail_mask, c}
+  v & tail_mask{T, c}
 }
 
 def VNI64 = [proc_bulk]i64
@@ -380,15 +422,12 @@ fn core_1brc{branchless_fail}(
     def v0 = load{VX, inp, end-exp_bulk}
     m:= homMask{v0 == 10}
     if (likely{m==0}) {
-      start:= end
-      do {
-        start-= exp_bulk
-        m = homMask{load{VX, inp, start-exp_bulk} == 10}
-      } while (m==0)
-      case{'long', start-clz{exp_bulk, m}}
+      def {start, hash} = info_long{inp, end}
+      if (is_java) case{'long', start}
+      else case{'long', start, hash}
     } else {
       c:= clz{exp_bulk, m}
-      case{'short', end-c, extract{hash_vec{v0 & load{VX, tail_mask, c}},0}}
+      case{'short', end-c, extract{hash_vec{v0 & tail_mask{VX,c}},0}}
     }
   }
 }

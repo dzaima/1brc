@@ -6,7 +6,9 @@
 #include<stdlib.h>
 #include<header.h>
 
-static int8_t si_c0_tail_mask_[] = {((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll)}; static int8_t* const si_c0_tail_mask = si_c0_tail_mask_;
+static int8_t si_c0_tail_mask_16_[] = {((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll)}; static int8_t* const si_c0_tail_mask_16 = si_c0_tail_mask_16_;
+
+static int8_t si_c1_tail_mask_32_[] = {((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll)}; static int8_t* const si_c1_tail_mask_32 = si_c1_tail_mask_32_;
 
 static uint64_t si_f0_core_1brc_buf_elts() {
   return ((uint64_t)4016ull);
@@ -16,7 +18,7 @@ static uint64_t si_f1_core_1brc_periter() {
   return ((uint64_t)10624ull);
 }
 
-static uint32_t si_f2_hash_1brc(int8_t* v0_arr) {
+static uint32_t si_f2_hash_1brc_short(int8_t* v0_arr) {
   int8_t* v1 = v0_arr + ((uint64_t)0ull);
   __m128i* v2 = (__m128i*)v1;
   __m128i* v3 = v2 + ((int64_t)0ll);
@@ -38,7 +40,62 @@ static uint32_t si_f2_hash_1brc(int8_t* v0_arr) {
   return v15;
 }
 
-static void si_f3_core_1brc_0(int32_t v0_ident, uint64_t* v1_bufdata, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
+static uint64_t si_f3_info_1brc_long(int8_t* v0_ptr) {
+  uint64_t v1_start = ((uint64_t)0ull) + ((uint64_t)32ull);
+  __m256i v2_hashv = _mm256_set1_epi8(((int8_t)0ll));
+  bool v3_cont = ((bool)1ull);
+l0:;
+  v1_start = v1_start - ((uint64_t)32ull);
+  uint64_t v4 = v1_start - ((uint64_t)32ull);
+  int8_t* v5 = v0_ptr + v4;
+  __m256i* v6 = (__m256i*)v5;
+  __m256i* v7 = v6 + ((int64_t)0ll);
+  __m256i v8 = _mm256_loadu_si256(v7);
+  __m256i v9 = _mm256_set1_epi8(((int8_t)10ll));
+  __m256i v10 = _mm256_cmpeq_epi8(v9, v8);
+  uint32_t v11_m = _mm256_movemask_epi8(v10);
+  v3_cont = v11_m == ((uint32_t)0ull);
+  if (!(v3_cont)) goto l1;
+  v2_hashv = _mm256_xor_si256(v2_hashv, v8);
+  goto l2;
+l1:;
+  uint64_t v12_c = _lzcnt_u32(v11_m);
+  v1_start = v1_start - v12_c;
+  int8_t* v13 = si_c1_tail_mask_32 + v12_c;
+  __m256i* v14 = (__m256i*)v13;
+  __m256i* v15 = v14 + ((int64_t)0ll);
+  __m256i v16 = _mm256_loadu_si256(v15);
+  __m256i v17 = _mm256_and_si256(v8, v16);
+  v2_hashv = _mm256_xor_si256(v2_hashv, v17);
+l2:;
+  if (v3_cont) goto l0;
+  __m256i v18 = v2_hashv;
+  __m128i v19 = _mm256_castsi256_si128(v18);
+  __m256i v20 = v2_hashv;
+  __m128i v21 = _mm256_extracti128_si256(v20, 1);
+  __m128i v22 = _mm_xor_si128(v19, v21);
+  __m128i v23_hv = v22;
+  __m128i v24 = _mm_shuffle_epi32(v23_hv, 238);
+  v23_hv = _mm_xor_si128(v23_hv, v24);
+  __m128i v25 = v23_hv;
+  __m128i v26 = _mm_srli_epi64(v25, 32);
+  __m128i v27 = v26;
+  v23_hv = _mm_xor_si128(v23_hv, v27);
+  __m128i v28 = v23_hv;
+  __m128i v29 = _mm_srai_epi32(v28, 16);
+  __m128i v30 = v29;
+  v23_hv = _mm_xor_si128(v23_hv, v30);
+  __m128i v31 = v23_hv;
+  int32_t v32 = _mm_extract_epi32(v31, 0);
+  uint32_t v33 = (uint32_t)v32;
+  uint64_t v34 = -(v1_start);
+  uint64_t v35 = (uint64_t)v33;
+  uint64_t v36 = v35 << ((uint64_t)32ull);
+  uint64_t v37 = v34 | v36;
+  return v37;
+}
+
+static void si_f4_core_1brc_0(int32_t v0_ident, uint64_t* v1_bufdata, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
   uint64_t v8_new = ((uint64_t)0ull);
   uint64_t v9_new = ((uint64_t)1004ull);
   uint64_t v10_new = ((uint64_t)2008ull);
@@ -342,7 +399,7 @@ l21:;
   uint64_t v230 = _lzcnt_u32(v226_mc);
   v227_c = v230 - ((uint64_t)16ull);
 l23:;
-  int8_t* v231 = si_c0_tail_mask + v227_c;
+  int8_t* v231 = si_c0_tail_mask_16 + v227_c;
   __m128i* v232 = (__m128i*)v231;
   __m128i* v233 = v232 + ((int64_t)0ll);
   __m128i v234 = _mm_loadu_si128(v233);
@@ -365,7 +422,7 @@ l23:;
   uint64_t v250 = _lzcnt_u32(v246_mc);
   v247_c = v250 - ((uint64_t)16ull);
 l24:;
-  int8_t* v251 = si_c0_tail_mask + v247_c;
+  int8_t* v251 = si_c0_tail_mask_16 + v247_c;
   __m128i* v252 = (__m128i*)v251;
   __m128i* v253 = v252 + ((int64_t)0ll);
   __m128i v254 = _mm_loadu_si128(v253);
@@ -388,7 +445,7 @@ l24:;
   uint64_t v270 = _lzcnt_u32(v266_mc);
   v267_c = v270 - ((uint64_t)16ull);
 l25:;
-  int8_t* v271 = si_c0_tail_mask + v267_c;
+  int8_t* v271 = si_c0_tail_mask_16 + v267_c;
   __m128i* v272 = (__m128i*)v271;
   __m128i* v273 = v272 + ((int64_t)0ll);
   __m128i v274 = _mm_loadu_si128(v273);
@@ -411,7 +468,7 @@ l25:;
   uint64_t v290 = _lzcnt_u32(v286_mc);
   v287_c = v290 - ((uint64_t)16ull);
 l26:;
-  int8_t* v291 = si_c0_tail_mask + v287_c;
+  int8_t* v291 = si_c0_tail_mask_16 + v287_c;
   __m128i* v292 = (__m128i*)v291;
   __m128i* v293 = v292 + ((int64_t)0ll);
   __m128i v294 = _mm_loadu_si128(v293);
@@ -836,49 +893,80 @@ l47:;
   bool v633 = v632_m == ((uint32_t)0ull);
   bool v634 = __builtin_expect(v633, 1);
   if (!(v634)) goto l49;
-  uint64_t v635_start = v621;
+  uint64_t v635_start = v621 + ((uint64_t)32ull);
+  __m256i v636_hashv = _mm256_set1_epi8(((int8_t)0ll));
+  bool v637_cont = ((bool)1ull);
 l50:;
-  v635_start = v635_start - ((uint64_t)16ull);
-  uint64_t v636 = v635_start - ((uint64_t)16ull);
-  int8_t* v637 = v6_inp + v636;
-  __m128i* v638 = (__m128i*)v637;
-  __m128i* v639 = v638 + ((int64_t)0ll);
-  __m128i v640 = _mm_loadu_si128(v639);
-  __m128i v641 = _mm_set1_epi8(((int8_t)10ll));
-  __m128i v642 = _mm_cmpeq_epi8(v641, v640);
-  v632_m = _mm_movemask_epi8(v642);
-  bool v643 = v632_m == ((uint32_t)0ull);
-  if (v643) goto l50;
-  uint64_t v644 = _lzcnt_u32(v632_m);
-  uint64_t v645 = v644 - ((uint64_t)16ull);
-  uint64_t v646 = v635_start - v645;
-  failed_long(v646, v621, v624);
-  goto l51;
-l49:;
-  uint64_t v648 = _lzcnt_u32(v632_m);
-  uint64_t v649_c = v648 - ((uint64_t)16ull);
-  uint64_t v650 = v621 - v649_c;
-  int8_t* v651 = si_c0_tail_mask + v649_c;
-  __m128i* v652 = (__m128i*)v651;
-  __m128i* v653 = v652 + ((int64_t)0ll);
-  __m128i v654 = _mm_loadu_si128(v653);
-  __m128i v655 = _mm_and_si128(v629, v654);
-  __m128i v656_hv = v655;
-  __m128i v657 = _mm_shuffle_epi32(v656_hv, 238);
-  v656_hv = _mm_xor_si128(v656_hv, v657);
-  __m128i v658 = v656_hv;
-  __m128i v659 = _mm_srli_epi64(v658, 32);
-  __m128i v660 = v659;
-  v656_hv = _mm_xor_si128(v656_hv, v660);
-  __m128i v661 = v656_hv;
-  __m128i v662 = _mm_srai_epi32(v661, 16);
-  __m128i v663 = v662;
-  v656_hv = _mm_xor_si128(v656_hv, v663);
-  __m128i v664 = v656_hv;
-  int32_t v665 = _mm_extract_epi32(v664, 0);
-  uint32_t v666 = (uint32_t)v665;
-  failed_short(v650, v621, v624, v666);
+  v635_start = v635_start - ((uint64_t)32ull);
+  uint64_t v638 = v635_start - ((uint64_t)32ull);
+  int8_t* v639 = v6_inp + v638;
+  __m256i* v640 = (__m256i*)v639;
+  __m256i* v641 = v640 + ((int64_t)0ll);
+  __m256i v642 = _mm256_loadu_si256(v641);
+  __m256i v643 = _mm256_set1_epi8(((int8_t)10ll));
+  __m256i v644 = _mm256_cmpeq_epi8(v643, v642);
+  uint32_t v645_m = _mm256_movemask_epi8(v644);
+  v637_cont = v645_m == ((uint32_t)0ull);
+  if (!(v637_cont)) goto l51;
+  v636_hashv = _mm256_xor_si256(v636_hashv, v642);
+  goto l52;
 l51:;
+  uint64_t v646_c = _lzcnt_u32(v645_m);
+  v635_start = v635_start - v646_c;
+  int8_t* v647 = si_c1_tail_mask_32 + v646_c;
+  __m256i* v648 = (__m256i*)v647;
+  __m256i* v649 = v648 + ((int64_t)0ll);
+  __m256i v650 = _mm256_loadu_si256(v649);
+  __m256i v651 = _mm256_and_si256(v642, v650);
+  v636_hashv = _mm256_xor_si256(v636_hashv, v651);
+l52:;
+  if (v637_cont) goto l50;
+  __m256i v652 = v636_hashv;
+  __m128i v653 = _mm256_castsi256_si128(v652);
+  __m256i v654 = v636_hashv;
+  __m128i v655 = _mm256_extracti128_si256(v654, 1);
+  __m128i v656 = _mm_xor_si128(v653, v655);
+  __m128i v657_hv = v656;
+  __m128i v658 = _mm_shuffle_epi32(v657_hv, 238);
+  v657_hv = _mm_xor_si128(v657_hv, v658);
+  __m128i v659 = v657_hv;
+  __m128i v660 = _mm_srli_epi64(v659, 32);
+  __m128i v661 = v660;
+  v657_hv = _mm_xor_si128(v657_hv, v661);
+  __m128i v662 = v657_hv;
+  __m128i v663 = _mm_srai_epi32(v662, 16);
+  __m128i v664 = v663;
+  v657_hv = _mm_xor_si128(v657_hv, v664);
+  __m128i v665 = v657_hv;
+  int32_t v666 = _mm_extract_epi32(v665, 0);
+  uint32_t v667 = (uint32_t)v666;
+  failed_long(v635_start, v621, v624, v667);
+  goto l53;
+l49:;
+  uint64_t v669 = _lzcnt_u32(v632_m);
+  uint64_t v670_c = v669 - ((uint64_t)16ull);
+  uint64_t v671 = v621 - v670_c;
+  int8_t* v672 = si_c0_tail_mask_16 + v670_c;
+  __m128i* v673 = (__m128i*)v672;
+  __m128i* v674 = v673 + ((int64_t)0ll);
+  __m128i v675 = _mm_loadu_si128(v674);
+  __m128i v676 = _mm_and_si128(v629, v675);
+  __m128i v677_hv = v676;
+  __m128i v678 = _mm_shuffle_epi32(v677_hv, 238);
+  v677_hv = _mm_xor_si128(v677_hv, v678);
+  __m128i v679 = v677_hv;
+  __m128i v680 = _mm_srli_epi64(v679, 32);
+  __m128i v681 = v680;
+  v677_hv = _mm_xor_si128(v677_hv, v681);
+  __m128i v682 = v677_hv;
+  __m128i v683 = _mm_srai_epi32(v682, 16);
+  __m128i v684 = v683;
+  v677_hv = _mm_xor_si128(v677_hv, v684);
+  __m128i v685 = v677_hv;
+  int32_t v686 = _mm_extract_epi32(v685, 0);
+  uint32_t v687 = (uint32_t)v686;
+  failed_short(v671, v621, v624, v687);
+l53:;
   goto l47;
 l48:;
 }
@@ -887,7 +975,9 @@ uint64_t (*const core_1brc_buf_elts)() = si_f0_core_1brc_buf_elts;
 
 uint64_t (*const core_1brc_periter)() = si_f1_core_1brc_periter;
 
-uint32_t (*const hash_1brc)(int8_t*) = si_f2_hash_1brc;
+uint32_t (*const hash_1brc_short)(int8_t*) = si_f2_hash_1brc_short;
 
-void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f3_core_1brc_0;
+uint64_t (*const info_1brc_long)(int8_t*) = si_f3_info_1brc_long;
+
+void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f4_core_1brc_0;
 

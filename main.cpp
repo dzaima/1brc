@@ -79,10 +79,10 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   r.data[dt_max] = -9999;
   return r.data;
 }
-static int64_t* get_data(std::string_view k) {
+static int64_t* get_data(std::string_view k, uint32_t hash) {
   ux len = k.size();
-  uint32_t hash = 0;
-  for (ux i = 0; i < len; i++) hash = hash*31 + k[i];
+  // uint32_t hash = 0;
+  // for (ux i = 0; i < len; i++) hash = hash*31 + k[i];
   if (RARE(hash==0)) hash = 1; // hash 0 is used as default
   ux idx = hash & slow_mask;
   while (true) {
@@ -98,9 +98,9 @@ static int64_t* get_data(std::string_view k) {
   }
 }
 
-static void add_long(ux nameStart, ux nameEnd, int sample) {
+static void add_long(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   std::string_view k{input+nameStart, nameEnd-nameStart};
-  int64_t* map_data = get_data(k);
+  int64_t* map_data = get_data(k, hash);
   
   int didx = 0;
   map_data[didx+dt_sum]+= sample;
@@ -108,8 +108,20 @@ static void add_long(ux nameStart, ux nameEnd, int sample) {
   map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int64_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int64_t)sample);
 }
+static uint32_t long_hash(char* ptr) {
+  return info_1brc_long((int8_t*)ptr)>>32;
+}
+static void add_long(ux nameStart, ux nameEnd, int sample) {
+  add_long(nameStart, nameEnd, sample, long_hash(input+nameEnd));
+}
+
+static char name_buf[512];
 static void merge_ent(std::string k, int64_t* new_data) {
-  int64_t* map_data = get_data(k);
+  char* end = name_buf+512;
+  char* start = end - k.size();
+  start[0] = 10;
+  memcpy(start+1, k.data(), k.size());
+  int64_t* map_data = get_data(k, long_hash(end));
   
   map_data[dt_sum]+= new_data[dt_sum];
   map_data[dt_num]+= new_data[dt_num];
@@ -198,14 +210,14 @@ static void add_any_slow(ux nameEnd, int sample) {
   memset(buf, 0, exp_bulk);
   memcpy(buf+exp_bulk-len, input+nameStart, len);
   
-  add_short(nameStart, nameEnd, sample, hash_1brc(buf));
+  add_short(nameStart, nameEnd, sample, hash_1brc_short(buf));
 }
 extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, int hash) {
   add_short(nameStart, nameEnd, sample, hash);
   // add_any_slow(nameEnd, sample);
 }
-extern "C" void failed_long(ux nameStart, ux nameEnd, int sample) {
-  add_long(nameStart, nameEnd, sample);
+extern "C" void failed_long(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
+  add_long(nameStart, nameEnd, sample, hash);
   // add_any_slow(nameEnd, sample);
 }
 
