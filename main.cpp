@@ -136,24 +136,6 @@ int def_hash(int i) { // hash to put at mapg_hash[i] such that it's never the ex
   return i + hashv_count;
 }
 
-static int read_sample(ux semiPos) {
-  ux i = semiPos+1;
-  bool neg = false;
-  if (input[i]=='-') {
-    i++;
-    neg = true;
-  }
-  int res = input[i++]-'0';
-  
-  int c = input[i++];
-  if (c!='.') {
-    res = res*10 + c-'0';
-    i++; // skip '.'
-  }
-  res = res*10 + input[i]-'0';
-  
-  return neg? -res : res;
-}
 static bool Arrays_equals(char* a1, ux s1, ux e1, char* a2, ux s2, ux e2) {
   return memcmp(a1+s1, a2+s2, e1-s1) == 0;
 }
@@ -195,32 +177,11 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int32_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int32_t)sample);
 }
-static void add_any_slow(ux nameEnd, int sample) {
-  ux nameStart = nameEnd;
-  while (nameStart>=1) {
-    char c = input[nameStart-1];
-    if (c=='\n') break;
-    nameStart--;
-  }
-  ux len = nameEnd-nameStart;
-  if (len >= exp_bulk) {
-    add_long(nameStart, nameEnd, sample);
-    return;
-  }
-  
-  int8_t buf[exp_bulk];
-  memset(buf, 0, exp_bulk);
-  memcpy(buf+exp_bulk-len, input+nameStart, len);
-  
-  add_short(nameStart, nameEnd, sample, hash_1brc_short(buf));
-}
 extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, int hash) {
   add_short(nameStart, nameEnd, sample, hash);
-  // add_any_slow(nameEnd, sample);
 }
 extern "C" void failed_long(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   add_long(nameStart, nameEnd, sample, hash);
-  // add_any_slow(nameEnd, sample);
 }
 
 
@@ -265,9 +226,6 @@ void basic_core(ux start, ux end) {
   free(input);
   
   input = input0;
-  // for (ux i = start; i < end; i++) {
-  //   if (input[i] == ';') add_any_slow(i, read_sample(i));
-  // }
 }
 
 static std::string fmt(double x) {
