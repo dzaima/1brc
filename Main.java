@@ -25,7 +25,7 @@ public class Main {
   static final int dt_min = 2;
   static final int dt_max = 3;
   
-  static final int hash_size = hash_mask + hashv_count;
+  static final int hash_size = hash_mask + hashv_count + 64; // 64 for Long.numberOfTrailingZeros behavior
   static final byte[] exp_zeroes = new byte[exp_bulk];
   
   
