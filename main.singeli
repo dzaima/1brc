@@ -73,6 +73,7 @@ export{'core_1brc_periter', core_1brc_periter}
 tail_mask_16:*i8 = merge{16**0, 16 ** -1}; def tail_mask_v{(16)} = tail_mask_16
 tail_mask_32:*i8 = merge{32**0, 32 ** -1}; def tail_mask_v{(32)} = tail_mask_32
 def tail_mask{T, i} = load{T, tail_mask_v{vcount{T}}, i}
+def mix{x:T} = x *{u16} make{[8]u16, 0x3243,0xf6a9,0x885b,0x308d,0x3131,0x98a3,0xe037,0x0734}
 
 
 
@@ -83,6 +84,7 @@ def hash_vec{x:V & eltype{V}==i8} = {
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
   # hv = HX~~madd{i16~*hv, i16~*hv}
+  # hv = mix{hv}
   hv # &{u32} 255 # for testing hash collision behavior
 }
 
@@ -111,11 +113,9 @@ def info_long{inp, end} = {
       if (should_hash) hashv^= v & tail_mask{VL, c}
     }
   } while (cont)
-  tup{
-    start,
-    if (should_hash) extract{hash_vec{if (lbulk==32) fold{^, halves{hashv}} else hashv}, 0}
-    else 0
-  }
+  def hash_long_vec{x:T & width{T}==128} = extract{hash_vec{x}, 0}
+  def hash_long_vec{x:T & width{T}==256} = hash_long_vec{fold{^, halves{hashv}}}
+  tup{start, if (should_hash) hash_long_vec{hashv} else 0}
 }
 
 (if (not is_java) {

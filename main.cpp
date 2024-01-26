@@ -23,6 +23,13 @@ uint32_t hash_mask = 0xfff;
 #ifndef DEBUG
   #define DEBUG 0
 #endif
+#if DEBUG
+  #define STAT_INC(N,d) stat_##N+= d
+  long long stat_fs_cam, stat_fs_new, stat_fs_ndsum; // failed_short call amount, count of successful inserts, and sum of delta of those
+  long long stat_fl_cam, stat_fl_gdsum, stat_fl_ndsum; // failed_long (or, really, get_data) call amount, get delta sum, insert delta sum
+#else
+  #define STAT_INC(...)
+#endif
 
 
 constexpr bool global_mmap = false;
@@ -70,8 +77,8 @@ ux slow_count = 0;
 
 
 static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint32_t hash, uint32_t idx) {
+  STAT_INC(fl_ndsum, idx - (hash & slow_mask));
   slow_filled_idxs[slow_count++] = idx;
-  
   slow_hash[idx] = hash;
   
   slow_ent& r = slow_table[idx];
@@ -82,9 +89,8 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   return r.data;
 }
 static int64_t* get_data(std::string_view k, uint32_t hash) {
+  STAT_INC(fl_cam, 1);
   ux len = k.size();
-  // uint32_t hash = 0;
-  // for (ux i = 0; i < len; i++) hash = hash*31 + k[i];
   if (RARE(hash==0)) hash = 1; // hash 0 is used as default
   ux idx = hash & slow_mask;
   while (true) {
@@ -93,6 +99,7 @@ static int64_t* get_data(std::string_view k, uint32_t hash) {
     if (found == hash) {
       slow_ent& r = slow_table[idx];
       if (r.name_len == len && memcmp(r.name, k.data(), len)==0) {
+        STAT_INC(fl_gdsum, idx - (hash & slow_mask));
         return r.data;
       }
     }
@@ -129,7 +136,7 @@ static void merge_ent(std::string k, int64_t* new_data) {
 }
 
 
-int def_hash(int i) { // hash to put at mapg_hash[i] such that it's never the expected one
+uint32_t def_hash(ux i) { // hash to put at mapg_hash[i] such that it's never the expected one
   return i + hashv_count;
 }
 
@@ -138,13 +145,16 @@ static bool Arrays_equals(char* a1, ux s1, ux e1, char* a2, ux s2, ux e2) {
 }
 
 extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
+  STAT_INC(fs_cam, 1);
+  
   ux len = nameEnd-nameStart;
-  ux hashm = hash & hash_mask;
+  uint32_t hashm = hash & hash_mask;
   ux idx = hashm;
   while (true) {
     if (mapg_hash[idx] == def_hash(idx)) break; // empty spot
     
-    if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
+    if (++idx == hashm + (ux)hashv_count) { // too many collisions, fall back to long map
+      // if (DEBUG) printf("[t%d] super-failed short on hash %u/%u\n", thread_n, hashm, hash);
       if (hash_mask == hash_mask_max) {
         add_long(nameStart, nameEnd, sample);
       } else {
@@ -156,6 +166,10 @@ extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, uint32_t hash
     }
   }
   
+  STAT_INC(fs_new, 1);
+  STAT_INC(fs_ndsum, idx-hashm);
+  
+  // if (DEBUG) printf("[t%d] new from failed_short for hash %u/%u\n", thread_n, hashm, hash);
   mapg_hash[idx] = hash;
   memcpy((char*)mapg_exp + (idx+1)*exp_bulk - len, input+nameStart, len);
   mapg_string[idx] = {input+nameStart, len};
@@ -191,8 +205,7 @@ void basic_core(ux start, ux end) {
   // get actually available data bounds
   ux clb = std::min(start, lbound);
   ux crb = std::min(inputEnd-input - end, rbound);
-  if (DEBUG) printf("[t%d] basic core range: %" SCNu64 "..%" SCNu64 "; max %" SCNu64 "\n", thread_n, start, end, (ux)(inputEnd-input));
-  if (DEBUG) printf("[t%d] basic core bounds: %" SCNu64 " & %" SCNu64 "\n", thread_n, clb, crb);
+  if (DEBUG) printf("[t%d] basic core range: %" SCNu64 "..%" SCNu64 "; max %" SCNu64 "; bounds: %" SCNu64 " & %" SCNu64 "\n", thread_n, start, end, (ux)(inputEnd-input), clb, crb);
   
   // create a buffer that looks like a real subset of the input
   ux nstart = lbound;
@@ -339,6 +352,8 @@ int main(int argc, char* argv[]) {
     run_core:;
   }
   
+  if (DEBUG) printf("[t%d] total slice: %" SCNu64 "..%" SCNu64 "\n", thread_n, start, end);
+  
   constexpr ux map_size = 32<<20; // 32MiB
   ux map_off = 0;
   constexpr ux align = 4096;
@@ -375,8 +390,6 @@ int main(int argc, char* argv[]) {
   start+= init_len;
   
   
-  if (DEBUG) printf("[t%d] processing %" SCNu64 "..%" SCNu64 "\n", thread_n, start, end);
-  
   ux inpsize = lbound + periter + rbound;
   ux bulkchars = 0;
   while (start+inpsize < end) {
@@ -401,7 +414,19 @@ int main(int argc, char* argv[]) {
     basic_core(end-left, end);
   }
   
-  if (DEBUG) printf("[t%d] total slowtable entries: %d\n", thread_n, (int)slow_count);
+  #if DEBUG
+    ux n = 0;
+    for (ux i = 0; i < slow_count; i++) n+= slow_table[slow_filled_idxs[i]].data[dt_num];
+    for (int i = 0; i < hash_size(); i++) if (mapg_hash[i] != def_hash(i)) n+= mapg_data[i*4 + dt_num];
+    
+    printf("[t%d] processed row count: %lld\n", thread_n, (long long)n);
+    printf("[t%d] short map: %4lld entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n,     stat_fs_new, stat_fs_cam, stat_fs_cam*100.0/n, stat_fs_ndsum*1.0/stat_fs_new);
+    printf("; misses: %lld (%.4g%%)\n", stat_fs_cam-stat_fs_new, (stat_fs_cam-stat_fs_new)*100.0/n);
+    printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g\n", thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
+    
+    // printf("short map occupancy: "); for (int i = 0; i < hash_size(); i++) printf("%c", mapg_hash[i]==def_hash(i)? '.' : '#'); printf("\n");
+    // printf("slow map occupancy: "); for (int i = 0; i < slow_size; i++) printf("%c", slow_hash[i]==0? '.' : '#'); printf("\n");
+  #endif
   
   if (thread_stats == nullptr) {
     if (!quiet) print_stats();
