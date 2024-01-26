@@ -1,5 +1,6 @@
 #include "header.h"
 
+#include <cinttypes>
 #include <climits>
 #include <cmath>
 #include <string.h>
@@ -43,6 +44,7 @@ static ux hash_size() { return hash_mask + hashv_count; }
 char exp_zeroes[exp_bulk];
 
 char* input;
+char* inputEnd;
 int64_t     mapg_sum   [hash_size_max]; // full-width sum
 int32_t     mapg_data  [hash_size_max*4];
 int8_t      mapg_exp   [hash_size_max*exp_bulk];
@@ -222,11 +224,50 @@ extern "C" void failed_long(ux nameStart, ux nameEnd, int sample, uint32_t hash)
 }
 
 
+constexpr ux lbound = 256; // to fit in a 100-byte name, plus SIMD overread
+constexpr ux rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
+ux periter;
+ux* core_buf;
 
+static void call_core(ux start) {
+  core_1brc(
+    0, core_buf,
+    hash_mask,
+    mapg_exp, mapg_hash, mapg_data,
+    (int8_t*)input, start
+  );
+}
 void basic_core(ux start, ux end) {
-  for (ux i = start; i < end; i++) {
-    if (input[i] == ';') add_any_slow(i, read_sample(i));
+  char* input0 = input;
+  ux len = end-start;
+  // get actually available data bounds
+  ux clb = std::min(start, lbound);
+  ux crb = std::min(inputEnd-input - end, rbound);
+  if (DEBUG) printf("[t%d] basic core range: %" SCNu64 "..%" SCNu64 "; max %" SCNu64 "\n", thread_n, start, end, (ux)(inputEnd-input));
+  if (DEBUG) printf("[t%d] basic core bounds: %" SCNu64 " & %" SCNu64 "\n", thread_n, clb, crb);
+  
+  // create a buffer that looks like a real subset of the input
+  ux nstart = lbound;
+  ux nend = nstart + len;
+  input = (char*)calloc(len + periter + lbound + rbound, 1); // trailing null bytes are fine
+  // don't bother updating nameEnd
+  
+  char* cpyDst = input+nstart - clb;
+  ux cpyLen = len+clb+crb;
+  memcpy(cpyDst, input0+start - clb, cpyLen);
+  if (cpyDst > input) cpyDst[-1] = 10; // ensure an always available newline before the first name
+  ux nendReal = cpyDst+cpyLen - input;
+  for (ux i = nend; i < nendReal; i++) if (input[i]==';') input[i] = 0; // ensure no semicolons outside parsed range
+  while (nstart < nend) {
+    call_core(nstart);
+    nstart+= periter;
   }
+  free(input);
+  
+  input = input0;
+  // for (ux i = start; i < end; i++) {
+  //   if (input[i] == ';') add_any_slow(i, read_sample(i));
+  // }
 }
 
 static std::string fmt(double x) {
@@ -286,7 +327,10 @@ int main(int argc, char* argv[]) {
   bool quiet = argc<3? false : argv[2][0]=='q';
   
   ux flen = lseek(fd, 0, SEEK_END);
-  if (global_mmap) input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
+  if (global_mmap) {
+    input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
+    inputEnd = input+flen;
+  }
   
   for (ux i = 0; i < hash_size_max; i++) mapg_hash[i] = def_hash(i);
   for (ux i = 0; i < hash_size_max; i++) {
@@ -295,10 +339,7 @@ int main(int argc, char* argv[]) {
   }
   
   
-  int periter = core_1brc_periter();
-  
-  constexpr ux lbound = 256; // to fit in a 100-byte name, plus SIMD overread
-  constexpr ux rbound = 64; // to fit in number after semicolon, and also SIMD read-past-the-end
+  periter = core_1brc_periter();
   
   ux start = 0;
   ux end = flen;
@@ -364,7 +405,7 @@ int main(int argc, char* argv[]) {
       if (e+rbound >= map_size) {
         ux delta = s & ~alignm;
         assert(delta!=0);
-        delta-= align; // include 
+        delta-= align; // as align>=lbound, guarantees lbound stays
         start-= delta;
         end-= delta;
         map_off+= delta;
@@ -373,9 +414,11 @@ int main(int argc, char* argv[]) {
       // if (input!=nullptr) munmap(input, map_size);
       // std::cout << "req "<<s<<".."<<e<<": mapping off=" << map_off << "; start=" << start << ", end=" << end << std::endl;
       input = (char*)mmap(input, map_size, PROT_READ, MAP_PRIVATE | (input==nullptr? 0 : MAP_FIXED) | MAP_POPULATE, fd, map_off);
+      inputEnd = input+map_size;
     }
   };
   
+  core_buf = new ux[core_1brc_buf_elts()];
   // parse head the slow way
   ux init_end = start + lbound;
   init_end = (init_end + alignm) & ~alignm;
@@ -387,19 +430,13 @@ int main(int argc, char* argv[]) {
   start+= init_len;
   
   
-  // printf("thread %d: %ld..%ld\n", thread_n, start, end);
-  ux* buf = new ux[core_1brc_buf_elts()];
+  if (DEBUG) printf("[t%d] processing %" SCNu64 "..%" SCNu64 "\n", thread_n, start, end);
   
   ux inpsize = lbound + periter + rbound;
   ux bulkchars = 0;
   while (start+inpsize < end) {
     ensure_input(start, start+periter);
-    core_1brc(
-      0, buf,
-      hash_mask,
-      mapg_exp, mapg_hash, mapg_data,
-      (int8_t*)input, start
-    );
+    call_core(start);
     start+= periter;
     bulkchars+= periter;
     if (bulkchars > 12800000) { // (2⋆31)÷999 records are needed to overflow the int32_t sum. At max there's one record per 6 chars "a;0.0\n", so 6×(2⋆31)÷999; round down for head/tail to fit
