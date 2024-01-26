@@ -6,7 +6,7 @@ def interleaved = 4 # number of semicolon searches to interleave
 def bufmax = 1000
 def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
-def HASHV = [4]HASH # buckets to search
+def HASHV = [if (is_java) 4 else 8]HASH # buckets to search
 def placeholder_idx{} = emit{u64,'','hash_mask_max'} + vcount{HASHV}
 
 # shift down by n bytes in the low 8 bytes of each 128-bit lane
@@ -316,9 +316,8 @@ fn core_1brc{branchless_fail}(
           tup{halves{total}, total}
         }
       }
-      
       def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
-      def get_idxs{hv:T & T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
+      def get_idxs{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
         idxv:= hv & hash_mask
         idxs:= each{cast_i{ux,.}, extract_hashes{idxv}}
         hashes:= pair{each{load{HASHV, map_hash, .}, idxs}}
@@ -336,7 +335,7 @@ fn core_1brc{branchless_fail}(
       }
       def get_idx_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
       def get_idx{hash:(HASH)} = get_idx_raw{hash, cast_i{ux, hash&hash_mask}}
-      def get_idxs{hv:[4]HASH} = tup{get_idx{extract{hv, 0}}}
+      def get_idxs{hv:(HASH~*VX)} = tup{get_idx{extract{hv, 0}}}
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
       def left = if (branchless_fail) ofence{bufE-bufS} else 9
@@ -389,7 +388,6 @@ fn core_1brc{branchless_fail}(
       def r_masked = mk{{} => mk{totals}{[32]i8}, {} => join{partss}}
       
       def r_hvs = mk{each{hash_vec, r_masked{T_hvs}}}
-      
       def idxs = {
         if (separate_idxs) join{each{get_idxs, r_hvs{T_idxs}}}
         else each{get_idx, join{each{extract_hashes, r_hvs{T_idxs}}}}

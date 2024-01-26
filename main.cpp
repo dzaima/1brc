@@ -42,7 +42,7 @@ static int thread_n = 0; // current thread number
 #define assert(X) ({ if (!(X)) abort(); })
 
 // copied from main.singeli:
-constexpr int hashv_count = 4;
+constexpr int hashv_count = 8;
 constexpr int exp_bulk = 16;
 constexpr int dt_sum = 0;
 constexpr int dt_num = 1;
@@ -451,7 +451,7 @@ int main(int argc, char* argv[]) {
     printf("[t%d] processed row count: %lld\n", thread_n, (long long)n);
     printf("[t%d] short map: %4lld entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n,     stat_fs_new, stat_fs_cam, stat_fs_cam*100.0/n, stat_fs_ndsum*1.0/stat_fs_new);
     printf("; misses: %lld (%.4g%%)\n", stat_fs_cam-stat_fs_new, (stat_fs_cam-stat_fs_new)*100.0/n);
-    printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
+    printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g",   thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
     printf("; far: %lld (%.4g%%)\n", stat_fl_far, stat_fl_far*100.0/stat_fl_cam);
     
     // printf("short map occupancy: "); for (int i = 0; i < hash_size(); i++) printf("%c", mapg_hash[i]==def_hash(i)? '.' : '#'); printf("\n");
