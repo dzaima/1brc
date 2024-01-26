@@ -335,9 +335,10 @@ fn core_1brc{branchless_fail}(
       def get_idxs{hv:[4]HASH} = tup{get_idx{extract{hv, 0}}}
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
+      def left = if (branchless_fail) ofence{bufE-bufS} else 9
       def get_temp{ij} = load{temp_buf, ij*4 + num_off}
       def store_fail{ij, fail} = { # didn't find ij'th record in map
-        if (rare{ij >= bufE-bufS}) goto{buf_end}
+        if (rare{ij >= (if (branchless_fail) left else bufE-bufS)}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
         store{failbuf, failposC, load{bufdata, bufS + ij}}
         store{failbuf, failposC+1, cast_i{ux, get_temp{ij}}}
