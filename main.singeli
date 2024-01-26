@@ -73,18 +73,18 @@ export{'core_1brc_periter', core_1brc_periter}
 tail_mask_16:*i8 = merge{16**0, 16 ** -1}; def tail_mask_v{(16)} = tail_mask_16
 tail_mask_32:*i8 = merge{32**0, 32 ** -1}; def tail_mask_v{(32)} = tail_mask_32
 def tail_mask{T, i} = load{T, tail_mask_v{vcount{T}}, i}
-def mix{x:T} = x *{u16} make{[8]u16, 0x3243,0xf6a9,0x885b,0x308d,0x3131,0x98a3,0xe037,0x0734}
+def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3243,0xf6a9,0x885b,0x308d,0x3131,0x98a3,0xe037,0x0734}
 
 
 
 def hash_vec{x:V & eltype{V}==i8} = {
   def HX = HASH~*V
   hv:= HX~~x
+  hv = mix{hv}
   hv^= l128_upper_u64{hv}
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
   # hv = HX~~madd{i16~*hv, i16~*hv}
-  # hv = mix{hv}
   hv # &{u32} 255 # for testing hash collision behavior
 }
 
