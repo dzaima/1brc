@@ -180,8 +180,12 @@ if (hasarch{'AVX2'}) {
     def p1 = slice{is,h}
     fold{&, (p0<h) & (p1>=h)} & (if (eq) same{p0, p1-h} else 1)
   }
+  
+  def sel{([8]u32), x:V, s if width{V}==256} = V~~emit{[8]f32, '_mm256_permutevar8x32_epi32', re_el{i32,x}, s}
+  
   def shuf{([4]u32), x:V, ...is & width{V}==128 & tuplen{is}==4} = emit{V, '_mm_shuffle_epi32', x, fold{+, is << tup{0,2,4,6}}}
   def shuf{([2]u64), x:V, ...is & width{V}==128 & tuplen{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
+  def shuf{([4]u64), x:V, ...is & width{V}==256 & tuplen{is}==4} = V~~emit{[4]f64, '_mm256_permute4x64_pd', re_el{f64,x}, base{4, is}}
   def shuf{([4]u64), x:V, ...is & width{V}==256 & tuplen{is}==4 & lanes{is,0}} = V~~emit{[4]f64, '_mm256_permute_pd', re_el{f64,x}, base{2, is&1}}
   def shuf{([8]u32), x:V, ...is & width{V}==256 & tuplen{is}==8 & lanes{is,1}} = V~~emit{[8]i32, '_mm256_shuffle_epi32', re_el{i32,x}, base{4, slice{is,0,4}}}
   

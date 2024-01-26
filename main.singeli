@@ -96,8 +96,9 @@ def hash_vec{x:V & eltype{V}==i8} = { # hash each 128-bit lane
 fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
 export{'hash_1brc_short', hash_1brc_short}
 
+def st_mask{{hash_mask, map_hash}} = hash_mask
 def probe_raw{{hash_mask, map_hash}, hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
-def probe{state, hash:(HASH)} = probe_raw{state, hash, cast_i{ux, hash & select{state,0}}}
+def probe{state, hash:(HASH)} = probe_raw{state, hash, cast_i{ux, hash & st_mask{state}}}
 
 def hash_vecs{state, vs} = {
   def {hash_mask, map_hash} = state
@@ -133,8 +134,14 @@ def hash_vecs{state, {a:T,b:T if width{T}==256} if not is_java} = {
   def r = hash_vec64{HASH ~* __xor{...unpack128{a,b}}}
   def els = tup{0,2,1,3}
   def me{T_idxs, separate_idxs} = {
-    def idxs0 = each{extract{r,.}, 2*els}
-    each{probe{state,.}, idxs0}
+    def extre{v} = each{extract{v, .}, 2*els}
+    def idxs = each{cast_i{ux,.}, extre{r & st_mask{state}}}
+    # def h64 = ofence{shuf{[8]u32, r, 0,0, 2,2, 4,4, 6,6}}
+    # def bc{i} = shuf{[4]u64, h64, i,i,i,i}
+    # each{probe{state,.}, idxs}
+    def h64 = ofence{sel{[8]u32, r, make{[8]u32,0,2,4,6, 0,2,4,6}}}
+    def bc{i} = shuf{[8]u32, h64, i, i, i, i, 4+i, 4+i, 4+i, 4+i}
+    each{probe_raw{state, ., .}, each{bc, els}, idxs}
   }
 }
 
