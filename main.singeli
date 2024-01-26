@@ -298,8 +298,7 @@ def semisearch{takes}{inp, inpOff, bufdata, bufEnds} = {
     }, ri, ms0, ms, bufcs, inpcs}
   }
   each{store{bufEnds, ., .}, ri, bufcs}
-  fn please_void():void={}
-  please_void()
+  undefined{void}
 }
 
 def dt_sum = 0

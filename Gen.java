@@ -829,10 +829,6 @@ public void f4_asfunc_generator_i8_i32_i32_i32(byte[] v0_a, int v1_a, int[] v2_a
   v3_a[1] = v5_new;
   v3_a[2] = v6_new;
   v3_a[3] = v7_new;
-  f5_please_void();
-  return;
-}
-public void f5_please_void() {
   return;
 }
 public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_ai64) {

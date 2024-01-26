@@ -7,9 +7,7 @@
 #include<header.h>
 
 static void si_f5_asfunc_generator_i8_u64_u64_u64(int8_t* v0_a, uint64_t v1_a, uint64_t* v2_a, uint64_t* v3_a);
-static void si_f6_please_void();
-static void si_f8_asfunc_generator_i8_u64_u64_u64(int8_t* v0_a, uint64_t v1_a, uint64_t* v2_a, uint64_t* v3_a);
-static void si_f9_please_void();
+static void si_f7_asfunc_generator_i8_u64_u64_u64(int8_t* v0_a, uint64_t v1_a, uint64_t* v2_a, uint64_t* v3_a);
 
 static int8_t si_c0_tail_mask_16_[] = {((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)0ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll),((int8_t)-1ll)}; static int8_t* const si_c0_tail_mask_16 = si_c0_tail_mask_16_;
 
@@ -1001,15 +999,11 @@ l1:;
   v3_a[1] = v5_new;
   v3_a[2] = v6_new;
   v3_a[3] = v7_new;
-  si_f6_please_void();
 }
 
-static void si_f6_please_void() {
-}
-
-static void si_f7_core_1brc_1(int32_t v0_ident, uint64_t* v1_bufdata, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
+static void si_f6_core_1brc_1(int32_t v0_ident, uint64_t* v1_bufdata, uint32_t v2_hash_mask, int8_t* v3_map_exp, uint32_t* v4_map_hash, int32_t* v5_map_data, int8_t* v6_inp, uint64_t v7_inpOff) {
   uint64_t v8_bufEnds_[4]; uint64_t* v8_bufEnds = v8_bufEnds_;
-  si_f8_asfunc_generator_i8_u64_u64_u64(v6_inp, v7_inpOff, v1_bufdata, v8_bufEnds);
+  si_f7_asfunc_generator_i8_u64_u64_u64(v6_inp, v7_inpOff, v1_bufdata, v8_bufEnds);
   uint64_t v10_semi = ((uint64_t)0ull);
   uint64_t v11 = v8_bufEnds[0];
   bool v12 = ((uint64_t)0ull) != v11;
@@ -1689,7 +1683,7 @@ l32:;
 l26:;
 }
 
-static void si_f8_asfunc_generator_i8_u64_u64_u64(int8_t* v0_a, uint64_t v1_a, uint64_t* v2_a, uint64_t* v3_a) {
+static void si_f7_asfunc_generator_i8_u64_u64_u64(int8_t* v0_a, uint64_t v1_a, uint64_t* v2_a, uint64_t* v3_a) {
   uint64_t v4_new = ((uint64_t)0ull);
   uint64_t v5_new = ((uint64_t)1004ull);
   uint64_t v6_new = ((uint64_t)2008ull);
@@ -1901,10 +1895,6 @@ l1:;
   v3_a[1] = v5_new;
   v3_a[2] = v6_new;
   v3_a[3] = v7_new;
-  si_f9_please_void();
-}
-
-static void si_f9_please_void() {
 }
 
 uint64_t (*const core_1brc_buf_elts)() = si_f0_core_1brc_buf_elts;
@@ -1917,5 +1907,5 @@ uint32_t (*const hash_1brc_long)(int8_t*) = si_f3_hash_1brc_long;
 
 void (*const core_1brc)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f4_core_1brc_0;
 
-void (*const core_1brc_branchless_fail)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f7_core_1brc_1;
+void (*const core_1brc_branchless_fail)(int32_t,uint64_t*,uint32_t,int8_t*,uint32_t*,int32_t*,int8_t*,uint64_t) = si_f6_core_1brc_1;
 
