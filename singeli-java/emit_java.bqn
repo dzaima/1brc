@@ -157,15 +157,23 @@ AddGlobal ← {resGlobal∾↩<𝕩⋄@}
 
 AddGlobal "public class Gen {"(⊢∾∾)@+10
 
+lns ×∘≠¨⊸/↩
+lnsSplit ← {{' '¨⌾((𝕩=@+160)⊸/) 𝕩}¨ ' ' Split 𝕩}¨ lns
+fnNameMap ← {
+  k‿v ← <˘⍉>{⟨3⊑𝕩, Arg 1⊑𝕩⟩}¨ ("export"≡⊑)¨⊸/ lnsSplit
+  "Cannot export function by multiple names in Java" ! ∧´∊k
+  k •HashMap v
+}
+
 fnIR ← @
 fnLine ← @
-{
-  ⟨⟩: 𝕩;
-  ps ← {' '¨⌾((𝕩=@+160)⊸/) 𝕩}¨ ' ' Split all←𝕩
+lnsSplit { ps𝕊wholeLine:
   {
     "beginFn":
       fnIR ↩ ⟨⟩
-      fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", {𝕩↓˜1+⊑𝕩⊐'_'} 1⊑ps, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
+      name ← 1⊑ps
+      name ↩ {fnNameMap.Has 𝕩? fnNameMap.Get 𝕩; name} '$'∾name
+      fnLine ↩ ∾⟨"public ", Type 2⊑ps, " ", name, "(", ¯2↓∾{n‿t: ∾⟨Type t, ' ', n, ", "⟩}¨ <˘ ∘‿2⥊ 4↓ps, ") {"⟩
       ;
     "endFn":
       switch‿defs‿begin‿main ← EmitFn fnIR
@@ -185,7 +193,7 @@ fnLine ← @
       fnIR↩@
       ;
     "require": {
-      "'staticline": AddGlobal ¯1↓20↓all;
+      "'staticline": AddGlobal ¯1↓20↓wholeLine;
       "'package": resTop ∾˜↩ <∾⟨"package ", ¯1↓2⊑ps, ';'⟩;
       "'import":  resTop ∾ ↩ <∾⟨"import ",  ¯1↓2⊑ps, ';'⟩;
       "'^unsafe'":

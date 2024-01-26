@@ -202,7 +202,7 @@ def dt_num = 1
 def dt_min = 2
 def dt_max = 3
 def DATA = if (is_java) i64 else i32
-fn core_1brc(
+fn core_1brc{branchless_fail}(
   ident:i32,
   bufdata:*ux,
   
@@ -392,7 +392,7 @@ fn core_1brc(
     }
   }
 }
-export{'core_1brc', core_1brc}
+export{'core_1brc', core_1brc{0}}
 
 (if (is_java or playground) {
   fn minibench(ai8:*i8, ai16:*i16, ai32:*i32, ai64:*i64) : void = @withbufs(object_arr) {

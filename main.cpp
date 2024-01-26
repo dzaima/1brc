@@ -1,5 +1,6 @@
 #include "header.h"
 
+#include <climits>
 #include <cmath>
 #include <string.h>
 #include <string>
@@ -14,7 +15,14 @@
 #include <sys/wait.h>
 
 typedef uint64_t ux;
-constexpr int hash_mask = 0xfff; // i.e. hash table size minus one
+
+// hash table size minus one; start out small, expand to big one on a bunch of collisions
+constexpr int hash_mask_max = 0xffff;
+int hash_mask = 0xfff;
+int collision_counter = 0;
+constexpr int collision_heuristic = 100;
+
+
 constexpr bool global_mmap = false;
 int num_threads = 8;
 #define RARE(X) __builtin_expect(X, 0)
@@ -28,15 +36,16 @@ constexpr int dt_num = 1;
 constexpr int dt_min = 2;
 constexpr int dt_max = 3;
 
-constexpr int hash_size = hash_mask + hashv_count;
+constexpr int hash_size_max = hash_mask_max + hashv_count;
+static int hash_size() { return hash_mask + hashv_count; }
 char exp_zeroes[exp_bulk];
 
 char* input;
-int64_t     mapg_sum   [hash_size]; // full-width sum
-int32_t     mapg_data  [hash_size*4];
-int8_t      mapg_exp   [hash_size*exp_bulk];
-uint32_t    mapg_hash  [hash_size*exp_bulk];
-std::string mapg_string[hash_size];
+int64_t     mapg_sum   [hash_size_max]; // full-width sum
+int32_t     mapg_data  [hash_size_max*4];
+int8_t      mapg_exp   [hash_size_max*exp_bulk];
+uint32_t    mapg_hash  [hash_size_max*exp_bulk];
+std::string mapg_string[hash_size_max];
 
 
 
@@ -120,6 +129,9 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
     }
     if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
       add_long(nameStart, nameEnd, sample);
+      if (++collision_counter > collision_heuristic) {
+        collision_counter = INT_MIN;
+      }
       return;
     }
   }
@@ -192,7 +204,7 @@ void print_stats() {
     ents.emplace_back(ent.first, ent.second);
   }
   
-  for (int i = 0; i < hash_size; i++) {
+  for (int i = 0; i < hash_size(); i++) {
     if (mapg_hash[i] != def_hash(i)) {
       ents.emplace_back(mapg_string[i], expand_stats(i));
     }
@@ -225,8 +237,8 @@ int main(int argc, char* argv[]) {
   ux flen = lseek(fd, 0, SEEK_END);
   if (global_mmap) input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
   
-  for (ux i = 0; i < hash_size; i++) mapg_hash[i] = def_hash(i);
-  for (ux i = 0; i < hash_size; i++) {
+  for (ux i = 0; i < hash_size(); i++) mapg_hash[i] = def_hash(i);
+  for (ux i = 0; i < hash_size(); i++) {
     mapg_data[i*4 + dt_min] = -9999;
     mapg_data[i*4 + dt_max] = -9999;
   }
@@ -341,7 +353,8 @@ int main(int argc, char* argv[]) {
     start+= periter;
     bulkchars+= periter;
     if (bulkchars > 12800000) { // (2⋆31)÷999 records are needed to overflow the int32_t sum. At max there's one record per 6 chars "a;0.0\n", so 6×(2⋆31)÷999; round down for head/tail to fit
-      for (ux i = 0; i < hash_size; i++) {
+      ux n = hash_size();
+      for (ux i = 0; i < n; i++) {
         mapg_sum[i]+= mapg_data[i*4 + dt_sum];
         mapg_data[i*4 + dt_sum] = 0;
       }
@@ -373,7 +386,8 @@ int main(int argc, char* argv[]) {
     
     for (auto& ent : long_entries) add(ent.first, ent.second);
     
-    for (int i = 0; i < hash_size; i++) {
+    ux n = hash_size();
+    for (int i = 0; i < n; i++) {
       if (mapg_hash[i] != def_hash(i)) add(mapg_string[i], expand_stats(i));
     }
     
