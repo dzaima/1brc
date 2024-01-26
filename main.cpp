@@ -17,8 +17,8 @@
 typedef uint64_t ux;
 
 // hash table size minus one; start out small, expand to big one on a bunch of collisions
-constexpr int hash_mask_max = 0xffff;
-int hash_mask = 0xfff;
+constexpr uint32_t hash_mask_max = 0xffff;
+uint32_t hash_mask = 0xfff;
 #ifndef DEBUG
   #define DEBUG 0
 #endif
@@ -26,6 +26,7 @@ int hash_mask = 0xfff;
 
 constexpr bool global_mmap = false;
 int num_threads = 8;
+static int thread_n = 0; // current thread number
 #define RARE(X) __builtin_expect(X, 0)
 #define assert(X) ({ if (!(X)) abort(); })
 
@@ -37,8 +38,8 @@ constexpr int dt_num = 1;
 constexpr int dt_min = 2;
 constexpr int dt_max = 3;
 
-constexpr int hash_size_max = hash_mask_max + hashv_count;
-static int hash_size() { return hash_mask + hashv_count; }
+constexpr ux hash_size_max = hash_mask_max + hashv_count;
+static ux hash_size() { return hash_mask + hashv_count; }
 char exp_zeroes[exp_bulk];
 
 char* input;
@@ -50,18 +51,51 @@ std::string mapg_string[hash_size_max];
 
 
 
-std::unordered_map<std::string_view, int64_t*> long_entries;
-static __attribute__((noinline)) int64_t* get_data_new(std::string_view k) {
-  std::string* kg = new std::string(k);
-  int64_t* p = long_entries[std::string_view(kg->data(), kg->size())] = new int64_t[4]();
-  p[dt_min] = -9999;
-  p[dt_max] = -9999;
-  return p;
+struct slow_ent {
+  char* name;
+  ux name_len;
+  int64_t data[4];
+};
+
+constexpr uint32_t slow_mask = 0xffff;
+constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having hash 0xffff, plus a buffer for overread
+
+uint32_t slow_hash[slow_size]; // if 0, empty
+slow_ent slow_table[slow_size];
+
+uint32_t slow_filled_idxs[10000]; // for iterations over the slow table to be faster
+ux slow_count = 0;
+
+
+static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint32_t hash, uint32_t idx) {
+  slow_filled_idxs[slow_count++] = idx;
+  
+  slow_hash[idx] = hash;
+  
+  slow_ent& r = slow_table[idx];
+  r.name = (new std::string(k))->data();
+  r.name_len = k.size();
+  r.data[dt_min] = -9999;
+  r.data[dt_max] = -9999;
+  return r.data;
 }
 static int64_t* get_data(std::string_view k) {
-  auto v = long_entries.find(k);
-  if (RARE(v == long_entries.end())) return get_data_new(k);
-  return v->second;
+  ux len = k.size();
+  uint32_t hash = 0;
+  for (ux i = 0; i < len; i++) hash = hash*31 + k[i];
+  if (RARE(hash==0)) hash = 1; // hash 0 is used as default
+  ux idx = hash & slow_mask;
+  while (true) {
+    uint32_t found = slow_hash[idx];
+    if (RARE(found == 0)) return get_data_new(k, hash, idx);
+    if (found == hash) {
+      slow_ent& r = slow_table[idx];
+      if (r.name_len == len && memcmp(r.name, k.data(), len)==0) {
+        return r.data;
+      }
+    }
+    idx++;
+  }
 }
 
 static void add_long(ux nameStart, ux nameEnd, int sample) {
@@ -132,7 +166,7 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
       if (hash_mask == hash_mask_max) {
         add_long(nameStart, nameEnd, sample);
       } else {
-        if (DEBUG) printf("too many collisions! expanding\n");
+        if (DEBUG) printf("[t%d] too many collisions! expanding\n", thread_n);
         hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
         add_short(nameStart, nameEnd, sample, hash); // try short path again, why not
       }
@@ -204,8 +238,9 @@ static int64_t* expand_stats(ux idx) {
 }
 void print_stats() {
   std::vector<std::pair<std::string, int64_t*>> ents;
-  for (auto& ent : long_entries) {
-    ents.emplace_back(ent.first, ent.second);
+  for (ux i = 0; i < slow_count; i++) {
+    slow_ent& r = slow_table[slow_filled_idxs[i]];
+    ents.emplace_back(r.name, r.data);
   }
   
   for (int i = 0; i < hash_size(); i++) {
@@ -259,7 +294,6 @@ int main(int argc, char* argv[]) {
   
   
   char* thread_stats = nullptr;
-  int thread_n = 0;
   if (num_threads > 1) {
     char** all_stats = new char*[num_threads];
     int* pids = new int[num_threads];
@@ -373,6 +407,8 @@ int main(int argc, char* argv[]) {
     basic_core(end-left, end);
   }
   
+  if (DEBUG) printf("[t%d] total slowtable entries: %d\n", thread_n, (int)slow_count);
+  
   if (thread_stats == nullptr) {
     if (!quiet) print_stats();
   } else {
@@ -388,7 +424,10 @@ int main(int argc, char* argv[]) {
       }
     };
     
-    for (auto& ent : long_entries) add(ent.first, ent.second);
+    for (ux i = 0; i < slow_count; i++) {
+      slow_ent& r = slow_table[slow_filled_idxs[i]];
+      add(r.name, r.data);
+    }
     
     ux n = hash_size();
     for (int i = 0; i < n; i++) {
