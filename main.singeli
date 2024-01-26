@@ -89,6 +89,40 @@ def hash_vec{x:V & eltype{V}==i8} = {
   hv # &{u32} 255 # for testing hash collision behavior
 }
 
+def hash_vecs{hash_mask, map_hash, VX, vs} = {
+  def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
+  def get_idx_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
+  def get_idx{hash:(HASH)} = get_idx_raw{hash, cast_i{ux, hash&hash_mask}}
+  
+  def get_idxs{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
+    idxv:= hv & hash_mask
+    idxs:= each{cast_i{ux,.}, extract_hashes{idxv}}
+    hashes:= pair{each{load{HASHV, map_hash, .}, idxs}}
+    m:= homMask{hashes == shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}}
+    m2:= m & (m-1)
+    if (rare{m2 == 0}) {
+      def {i0,i1} = idxs
+      def c = ctz{m}
+      idxs = tup{i0+c, i1+c-vcount{HASHV}}
+      idxs = each{{i} => i & cast_i{ux,hash_mask}, idxs} # make sure bad results are still valid
+    } else {
+      idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
+    }
+    idxs
+  }
+  def get_idxs{hv:(HASH~*VX)} = tup{get_idx{extract{hv, 0}}}
+  
+  def r = each{hash_vec, vs}
+  def me{T_idxs, separate_idxs} = {
+    if (separate_idxs) join{each{get_idxs, r}}
+    else each{get_idx, join{each{extract_hashes, r}}}
+  }
+}
+
+# def hash_vecs{hash_mask, map_hash, VX, {a:T,b:T & width{T}==256}} = {
+#   1
+# }
+
 fn hash_1brc_short(arr:*i8) : HASH = extract{hash_vec{load{[exp_bulk]i8, arr, ux~~0}}, 0}
 export{'hash_1brc_short', hash_1brc_short}
 
@@ -316,26 +350,6 @@ fn core_1brc{branchless_fail}(
           tup{halves{total}, total}
         }
       }
-      def extract_hashes{v:T} = each{extract{v,.}, range{vcount{T}/4} * 4}
-      def get_idxs{hv:T if exp_bulk==16 and T==[8]HASH} = { # [hash0,?,?,?, hash1,?,?,?] → tup{index of hash0, index of hash1}; unspecified but valid results if not found
-        idxv:= hv & hash_mask
-        idxs:= each{cast_i{ux,.}, extract_hashes{idxv}}
-        hashes:= pair{each{load{HASHV, map_hash, .}, idxs}}
-        m:= homMask{hashes == shuf{[8]HASH, hv, 0,0,0,0, 4,4,4,4}}
-        m2:= m & (m-1)
-        if (rare{m2 == 0}) {
-          def {i0,i1} = idxs
-          def c = ctz{m}
-          idxs = tup{i0+c, i1+c-vcount{HASHV}}
-          idxs = each{{i} => i & cast_i{ux,hash_mask}, idxs} # make sure bad results are still valid
-        } else {
-          idxs = each{{idx,m} => idx+ctz{m}, idxs, tup{m,m2>>vcount{HASHV}}}
-        }
-        idxs
-      }
-      def get_idx_raw{hash, idx} = idx + ctz{homMask{hash == load{HASHV, map_hash, idx}}}
-      def get_idx{hash:(HASH)} = get_idx_raw{hash, cast_i{ux, hash&hash_mask}}
-      def get_idxs{hv:(HASH~*VX)} = tup{get_idx{extract{hv, 0}}}
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
       def left = if (branchless_fail) ofence{bufE-bufS} else 9
@@ -387,11 +401,8 @@ fn core_1brc{branchless_fail}(
       def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
       def r_masked = mk{{} => mk{totals}{[32]i8}, {} => join{partss}}
       
-      def r_hvs = mk{each{hash_vec, r_masked{T_hvs}}}
-      def idxs = {
-        if (separate_idxs) join{each{get_idxs, r_hvs{T_idxs}}}
-        else each{get_idx, join{each{extract_hashes, r_hvs{T_idxs}}}}
-      }
+      def r_hvs = hash_vecs{hash_mask, map_hash, VX, r_masked{T_hvs}}
+      def idxs = r_hvs{T_idxs, separate_idxs}
       
       def exps = each{get_exp, idxs}
       
