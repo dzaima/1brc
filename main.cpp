@@ -42,6 +42,7 @@ static int thread_n = 0; // current thread number
 #define RARE(X) __builtin_expect(X, 0)
 #define LIKELY(X) __builtin_expect(X, 1)
 #define assert(X) ({ if (!(X)) abort(); })
+#define ALIGN __attribute__((aligned(64)))
 
 // copied from main.singeli:
 constexpr int hashv_count = 8;
@@ -53,15 +54,14 @@ constexpr int dt_max = 3;
 
 constexpr ux hash_size_max = hash_mask_max + hashv_count + 1; // 1 reserved as placeholder for branchless writes
 static ux hash_size() { return hash_mask + hashv_count; }
-char exp_zeroes[exp_bulk];
 
 char* input;
 char* inputEnd;
-int64_t     mapg_sum   [hash_size_max]; // full-width sum
-int32_t     mapg_data  [hash_size_max*4];
-int8_t      mapg_exp   [hash_size_max*exp_bulk];
-uint32_t    mapg_hash  [hash_size_max*exp_bulk];
-std::string mapg_string[hash_size_max];
+ALIGN int64_t     mapg_sum   [hash_size_max]; // full-width sum
+ALIGN int32_t     mapg_data  [hash_size_max*4];
+ALIGN int8_t      mapg_exp   [hash_size_max*exp_bulk];
+ALIGN uint32_t    mapg_hash  [hash_size_max*exp_bulk];
+ALIGN std::string mapg_string[hash_size_max];
 
 
 
@@ -74,11 +74,20 @@ struct slow_ent {
 constexpr uint32_t slow_mask = 0xfff; // less than 10k, but slow_size adds a buffer
 constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having max hash, plus a buffer for overread
 
-uint32_t slow_hash[slow_size]; // if 0, empty
-slow_ent slow_table[slow_size];
+ALIGN uint32_t slow_hash[slow_size]; // if 0, empty
+ALIGN slow_ent slow_table[slow_size];
 
 uint32_t slow_filled_idxs[10000]; // for iterations over the slow table to be faster
 ux slow_count = 0;
+
+ALIGN char names[20000 * 128 + 256];
+char* names_curr = names + 128;
+static char* alloc_name(ux len) {
+  ux rup = (len+31) & ~(ux)31;
+  char* res = names_curr;
+  names_curr+= rup;
+  return res;
+}
 
 uint8_t name_not[256];
 #define LOADU(P) _mm256_loadu_si256((__m256i*)(P))
@@ -102,7 +111,7 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   slow_hash[idx] = hash;
   
   slow_ent& r = slow_table[idx];
-  r.name = (char*)calloc(128, 1);
+  r.name = alloc_name(k.size()+1);
   memcpy(r.name, k.data(), k.size());
   r.name[k.size()] = 0;
   r.name_len = k.size();

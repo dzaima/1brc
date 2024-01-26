@@ -136,9 +136,6 @@ def hash_vecs{state, {a:T,b:T if width{T}==256} if not is_java} = {
   def me{T_idxs, separate_idxs} = {
     def extre{v} = each{extract{v, .}, 2*els}
     def idxs = each{cast_i{ux,.}, extre{r & st_mask{state}}}
-    # def h64 = ofence{shuf{[8]u32, r, 0,0, 2,2, 4,4, 6,6}}
-    # def bc{i} = shuf{[4]u64, h64, i,i,i,i}
-    # each{probe{state,.}, idxs}
     def h64 = ofence{sel{[8]u32, r, make{[8]u32,0,2,4,6, 0,2,4,6}}}
     def bc{i} = shuf{[8]u32, h64, i, i, i, i, 4+i, 4+i, 4+i, 4+i}
     each{probe_raw{state, ., .}, each{bc, els}, idxs}
