@@ -13,7 +13,7 @@ extern uint64_t (*const core_1brc_periter)();
 extern uint32_t (*const hash_1brc_short)(int8_t*);
 extern uint64_t (*const info_1brc_long)(int8_t*); // len | hash<<32
 
-void failed_short(uint64_t nameStart, uint64_t nameEnd, int sample, int hash);
+void failed_short(uint64_t nameStart, uint64_t nameEnd, int sample, uint32_t hash);
 void failed_long(uint64_t nameStart, uint64_t nameEnd, int sample, uint32_t hash);
   
 #ifdef __cplusplus

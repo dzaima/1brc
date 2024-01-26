@@ -140,35 +140,28 @@ static bool Arrays_equals(char* a1, ux s1, ux e1, char* a2, ux s2, ux e2) {
   return memcmp(a1+s1, a2+s2, e1-s1) == 0;
 }
 
-static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
+extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   ux len = nameEnd-nameStart;
   ux hashm = hash & hash_mask;
   ux idx = hashm;
   while (true) {
-    int exp_end = (idx+1)*exp_bulk;
-    int exp_start = exp_end - len;
-    if (mapg_hash[idx] == hash && // already present
-        Arrays_equals((char*)mapg_exp, exp_start, exp_end,            input, nameStart, nameEnd) &&
-        Arrays_equals((char*)mapg_exp, exp_end-exp_bulk, exp_start,   exp_zeroes, 0, exp_bulk-len)) {
-      break;
-    }
-    if (mapg_hash[idx] == def_hash(idx)) { // empty spot
-      mapg_hash[idx] = hash;
-      memcpy((char*)mapg_exp + (idx+1)*exp_bulk - len, input+nameStart, len);
-      mapg_string[idx] = {input+nameStart, len};
-      break;
-    }
+    if (mapg_hash[idx] == def_hash(idx)) break; // empty spot
+    
     if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
       if (hash_mask == hash_mask_max) {
         add_long(nameStart, nameEnd, sample);
       } else {
         if (DEBUG) printf("[t%d] too many collisions! expanding\n", thread_n);
         hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
-        add_short(nameStart, nameEnd, sample, hash); // try short path again, why not
+        failed_short(nameStart, nameEnd, sample, hash); // try short path again, why not
       }
       return;
     }
   }
+  
+  mapg_hash[idx] = hash;
+  memcpy((char*)mapg_exp + (idx+1)*exp_bulk - len, input+nameStart, len);
+  mapg_string[idx] = {input+nameStart, len};
   
   ux didx = idx*4;
   int32_t* map_data = mapg_data;
@@ -176,9 +169,6 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   map_data[didx+dt_num]+= 1;
   map_data[didx+dt_min] = std::max(map_data[didx+dt_min], -(int32_t)sample);
   map_data[didx+dt_max] = std::max(map_data[didx+dt_max], (int32_t)sample);
-}
-extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, int hash) {
-  add_short(nameStart, nameEnd, sample, hash);
 }
 extern "C" void failed_long(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
   add_long(nameStart, nameEnd, sample, hash);
