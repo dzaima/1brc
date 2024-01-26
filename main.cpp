@@ -17,6 +17,8 @@
 #include <sys/wait.h>
 
 typedef uint64_t ux;
+static ux cc0=0, ccc=0; // collision counter (initial map, current)
+constexpr ux collision_heuristic = 40;
 
 // hash table size minus one; start out small, expand to big one on a bunch of collisions
 uint32_t hash_mask = 0xfff;
@@ -92,7 +94,9 @@ static bool eqname(const char* a, const char* b, ux n) {
   return _mm256_movemask_epi8(ok) == 0xffffffff;
 }
 
+static bool got_new;
 static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint32_t hash, uint32_t idx) {
+  got_new = true;
   STAT_INC(fl_ndsum, idx - (hash & slow_mask));
   slow_filled_idxs[slow_count++] = idx;
   slow_hash[idx] = hash;
@@ -180,15 +184,22 @@ extern "C" void failed_short(ux nameStart, ux nameEnd, int sample, uint32_t hash
   while (true) {
     if (mapg_hash[idx] == def_hash(idx)) break; // empty spot
     
-    if (++idx == hashm + (ux)hashv_count) { // too many collisions, fall back to long map
+    if (++idx == hashm + (ux)hashv_count) { // SIMD path max scan length
       // if (DEBUG) printf("[t%d] super-failed short on hash %u/%u\n", thread_n, hashm, hash);
       if (expanded_map) {
         add_long(nameStart, nameEnd, sample);
       } else {
-        if (DEBUG) printf("[t%d] too many collisions! expanding\n", thread_n);
-        hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
-        expanded_map = true;
-        failed_short(nameStart, nameEnd, sample, hash); // try short path again, why not
+        got_new = false;
+        add_long(nameStart, nameEnd, sample);
+        if (got_new && ccc++ > collision_heuristic) {
+          if (DEBUG) {
+            cc0 = ccc;
+            printf("[t%d] too many collisions! expanding\n", thread_n);
+            // printf("short map occupancy: "); for (int i = 0; i < hash_size(); i++) printf("%c", mapg_hash[i]==def_hash(i)? '.' : '#'); printf("\n");
+          }
+          hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
+          expanded_map = true;
+        }
       }
       return;
     }
@@ -449,6 +460,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < hash_size(); i++) if (mapg_hash[i] != def_hash(i)) n+= mapg_data[i*4 + dt_num];
     
     printf("[t%d] processed row count: %lld\n", thread_n, (long long)n);
+    printf("[t%d] short map collision counters: small:%lld large:%lld\n", thread_n, (long long)(expanded_map? cc0 : ccc), (long long)(expanded_map? ccc : -1));
     printf("[t%d] short map: %4lld entries; %lld lookups (%.4g%%); avg chain %.3g", thread_n,     stat_fs_new, stat_fs_cam, stat_fs_cam*100.0/n, stat_fs_ndsum*1.0/stat_fs_new);
     printf("; misses: %lld (%.4g%%)\n", stat_fs_cam-stat_fs_new, (stat_fs_cam-stat_fs_new)*100.0/n);
     printf("[t%d] slow map:  %4d entries; %lld lookups (%.4g%%); avg chain %.3g",   thread_n, (int)slow_count, stat_fl_cam, stat_fl_cam*100.0/n, stat_fl_ndsum*1.0/slow_count);
