@@ -576,21 +576,21 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
             l28: {
               l27: {
                 if (!v410) break l27;
-                int v411_dataoff = v301 * 4;
+                int v411 = v301 * 4;
                 short v412 = v192_temp_buf[2];
                 long v413_temp = (long) v412;
-                int v414 = v411_dataoff + 2;
+                int v414 = v411 + 2;
                 long v415 = v5_map_data[v414];
                 long v416 = Math.min(v415, v413_temp);
                 v5_map_data[v414] = v416;
-                int v418 = v411_dataoff + 3;
+                int v418 = v411 + 3;
                 long v419 = v5_map_data[v418];
                 long v420 = Math.max(v419, v413_temp);
                 v5_map_data[v418] = v420;
-                long v422 = v5_map_data[v411_dataoff];
+                long v422 = v5_map_data[v411];
                 long v423 = v422 + v413_temp;
-                v5_map_data[v411_dataoff] = v423;
-                int v425 = v411_dataoff + 1;
+                v5_map_data[v411] = v423;
+                int v425 = v411 + 1;
                 long v426 = v5_map_data[v425];
                 long v427 = v426 + 1L;
                 v5_map_data[v425] = v427;
@@ -608,124 +608,128 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
               short v434 = v192_temp_buf[2];
               int v435 = (int) v434;
               v193_failbuf[v433] = v435;
-              v195_failposC = v195_failposC + 2;
+              int v437 = 1 << 1;
+              v195_failposC = v195_failposC + v437;
             }
-            boolean v437 = v224.equals(v332);
+            boolean v438 = v224.equals(v332);
             l31: {
               l30: {
-                if (!v437) break l30;
-                int v438_dataoff = v310 * 4;
-                short v439 = v192_temp_buf[6];
-                long v440_temp = (long) v439;
-                int v441 = v438_dataoff + 2;
-                long v442 = v5_map_data[v441];
-                long v443 = Math.min(v442, v440_temp);
-                v5_map_data[v441] = v443;
-                int v445 = v438_dataoff + 3;
-                long v446 = v5_map_data[v445];
-                long v447 = Math.max(v446, v440_temp);
-                v5_map_data[v445] = v447;
-                long v449 = v5_map_data[v438_dataoff];
-                long v450 = v449 + v440_temp;
-                v5_map_data[v438_dataoff] = v450;
-                int v452 = v438_dataoff + 1;
-                long v453 = v5_map_data[v452];
-                long v454 = v453 + 1L;
-                v5_map_data[v452] = v454;
+                if (!v438) break l30;
+                int v439 = v310 * 4;
+                short v440 = v192_temp_buf[6];
+                long v441_temp = (long) v440;
+                int v442 = v439 + 2;
+                long v443 = v5_map_data[v442];
+                long v444 = Math.min(v443, v441_temp);
+                v5_map_data[v442] = v444;
+                int v446 = v439 + 3;
+                long v447 = v5_map_data[v446];
+                long v448 = Math.max(v447, v441_temp);
+                v5_map_data[v446] = v448;
+                long v450 = v5_map_data[v439];
+                long v451 = v450 + v441_temp;
+                v5_map_data[v439] = v451;
+                int v453 = v439 + 1;
+                long v454 = v5_map_data[v453];
+                long v455 = v454 + 1L;
+                v5_map_data[v453] = v455;
                 if (1==1) break l31;
               }
-              int v456 = v199_bufE - v198_bufS;
-              boolean v457 = 1 >= v456;
+              int v457 = v199_bufE - v198_bufS;
+              boolean v458 = 1 >= v457;
               l32: {
-                if (!v457) break l32;
+                if (!v458) break l32;
                 if (1==1) break l20;
               }
-              int v458 = v198_bufS + 1;
-              int v459 = v1_bufdata[v458];
-              v193_failbuf[v195_failposC] = v459;
-              int v461 = v195_failposC + 1;
-              short v462 = v192_temp_buf[6];
-              int v463 = (int) v462;
-              v193_failbuf[v461] = v463;
-              v195_failposC = v195_failposC + 2;
+              int v459 = v198_bufS + 1;
+              int v460 = v1_bufdata[v459];
+              v193_failbuf[v195_failposC] = v460;
+              int v462 = v195_failposC + 1;
+              short v463 = v192_temp_buf[6];
+              int v464 = (int) v463;
+              v193_failbuf[v462] = v464;
+              int v466 = 1 << 1;
+              v195_failposC = v195_failposC + v466;
             }
-            boolean v465 = v236.equals(v334);
+            boolean v467 = v236.equals(v334);
             l34: {
               l33: {
-                if (!v465) break l33;
-                int v466_dataoff = v319 * 4;
-                short v467 = v192_temp_buf[10];
-                long v468_temp = (long) v467;
-                int v469 = v466_dataoff + 2;
-                long v470 = v5_map_data[v469];
-                long v471 = Math.min(v470, v468_temp);
-                v5_map_data[v469] = v471;
-                int v473 = v466_dataoff + 3;
-                long v474 = v5_map_data[v473];
-                long v475 = Math.max(v474, v468_temp);
-                v5_map_data[v473] = v475;
-                long v477 = v5_map_data[v466_dataoff];
-                long v478 = v477 + v468_temp;
-                v5_map_data[v466_dataoff] = v478;
-                int v480 = v466_dataoff + 1;
-                long v481 = v5_map_data[v480];
-                long v482 = v481 + 1L;
-                v5_map_data[v480] = v482;
+                if (!v467) break l33;
+                int v468 = v319 * 4;
+                short v469 = v192_temp_buf[10];
+                long v470_temp = (long) v469;
+                int v471 = v468 + 2;
+                long v472 = v5_map_data[v471];
+                long v473 = Math.min(v472, v470_temp);
+                v5_map_data[v471] = v473;
+                int v475 = v468 + 3;
+                long v476 = v5_map_data[v475];
+                long v477 = Math.max(v476, v470_temp);
+                v5_map_data[v475] = v477;
+                long v479 = v5_map_data[v468];
+                long v480 = v479 + v470_temp;
+                v5_map_data[v468] = v480;
+                int v482 = v468 + 1;
+                long v483 = v5_map_data[v482];
+                long v484 = v483 + 1L;
+                v5_map_data[v482] = v484;
                 if (1==1) break l34;
               }
-              int v484 = v199_bufE - v198_bufS;
-              boolean v485 = 2 >= v484;
+              int v486 = v199_bufE - v198_bufS;
+              boolean v487 = 2 >= v486;
               l35: {
-                if (!v485) break l35;
+                if (!v487) break l35;
                 if (1==1) break l20;
               }
-              int v486 = v198_bufS + 2;
-              int v487 = v1_bufdata[v486];
-              v193_failbuf[v195_failposC] = v487;
-              int v489 = v195_failposC + 1;
-              short v490 = v192_temp_buf[10];
-              int v491 = (int) v490;
-              v193_failbuf[v489] = v491;
-              v195_failposC = v195_failposC + 2;
+              int v488 = v198_bufS + 2;
+              int v489 = v1_bufdata[v488];
+              v193_failbuf[v195_failposC] = v489;
+              int v491 = v195_failposC + 1;
+              short v492 = v192_temp_buf[10];
+              int v493 = (int) v492;
+              v193_failbuf[v491] = v493;
+              int v495 = 1 << 1;
+              v195_failposC = v195_failposC + v495;
             }
-            boolean v493 = v248.equals(v336);
+            boolean v496 = v248.equals(v336);
             l37: {
               l36: {
-                if (!v493) break l36;
-                int v494_dataoff = v328 * 4;
-                short v495 = v192_temp_buf[14];
-                long v496_temp = (long) v495;
-                int v497 = v494_dataoff + 2;
-                long v498 = v5_map_data[v497];
-                long v499 = Math.min(v498, v496_temp);
-                v5_map_data[v497] = v499;
-                int v501 = v494_dataoff + 3;
-                long v502 = v5_map_data[v501];
-                long v503 = Math.max(v502, v496_temp);
-                v5_map_data[v501] = v503;
-                long v505 = v5_map_data[v494_dataoff];
-                long v506 = v505 + v496_temp;
-                v5_map_data[v494_dataoff] = v506;
-                int v508 = v494_dataoff + 1;
-                long v509 = v5_map_data[v508];
-                long v510 = v509 + 1L;
-                v5_map_data[v508] = v510;
+                if (!v496) break l36;
+                int v497 = v328 * 4;
+                short v498 = v192_temp_buf[14];
+                long v499_temp = (long) v498;
+                int v500 = v497 + 2;
+                long v501 = v5_map_data[v500];
+                long v502 = Math.min(v501, v499_temp);
+                v5_map_data[v500] = v502;
+                int v504 = v497 + 3;
+                long v505 = v5_map_data[v504];
+                long v506 = Math.max(v505, v499_temp);
+                v5_map_data[v504] = v506;
+                long v508 = v5_map_data[v497];
+                long v509 = v508 + v499_temp;
+                v5_map_data[v497] = v509;
+                int v511 = v497 + 1;
+                long v512 = v5_map_data[v511];
+                long v513 = v512 + 1L;
+                v5_map_data[v511] = v513;
                 if (1==1) break l37;
               }
-              int v512 = v199_bufE - v198_bufS;
-              boolean v513 = 3 >= v512;
+              int v515 = v199_bufE - v198_bufS;
+              boolean v516 = 3 >= v515;
               l38: {
-                if (!v513) break l38;
+                if (!v516) break l38;
                 if (1==1) break l20;
               }
-              int v514 = v198_bufS + 3;
-              int v515 = v1_bufdata[v514];
-              v193_failbuf[v195_failposC] = v515;
-              int v517 = v195_failposC + 1;
-              short v518 = v192_temp_buf[14];
-              int v519 = (int) v518;
-              v193_failbuf[v517] = v519;
-              v195_failposC = v195_failposC + 2;
+              int v517 = v198_bufS + 3;
+              int v518 = v1_bufdata[v517];
+              v193_failbuf[v195_failposC] = v518;
+              int v520 = v195_failposC + 1;
+              short v521 = v192_temp_buf[14];
+              int v522 = (int) v521;
+              v193_failbuf[v520] = v522;
+              int v524 = 1 << 1;
+              v195_failposC = v195_failposC + v524;
             }
             v198_bufS = v198_bufS + 4;
             if (1==1) continue l21;
@@ -740,68 +744,68 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
   }
   l40: {
     l39: while(true) {
-      boolean v521 = v194_failposS < v195_failposC;
-      if (!v521) break l40;
-      int v522 = v193_failbuf[v194_failposS];
-      int v523 = v194_failposS + 1;
-      int v524 = v193_failbuf[v523];
+      boolean v525 = v194_failposS < v195_failposC;
+      if (!v525) break l40;
+      int v526 = v193_failbuf[v194_failposS];
+      int v527 = v194_failposS + 1;
+      int v528 = v193_failbuf[v527];
       v194_failposS = v194_failposS + 2;
-      int v525 = v522 - 16;
-      ByteVector v526 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v525);
-      ByteVector v527 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
-      VectorMask<?> v528 = v526.compare(VectorOperators.EQ, v527);
-      long v529_m = v528.toLong();
-      boolean v530 = v529_m == 0L;
+      int v529 = v526 - 16;
+      ByteVector v530 = (ByteVector) ByteVector.SPECIES_128.fromArray(v6_inp, v529);
+      ByteVector v531 = (ByteVector) ByteVector.SPECIES_128.broadcast((byte)10);
+      VectorMask<?> v532 = v530.compare(VectorOperators.EQ, v531);
+      long v533_m = v532.toLong();
+      boolean v534 = v533_m == 0L;
       l45: {
         l41: {
-          if (!v530) break l41;
-          int v531_start = v522 + 32;
-          int v532_hashv = 0;
-          boolean v533_cont = true;
+          if (!v534) break l41;
+          int v535_start = v526 + 32;
+          int v536_hashv = 0;
+          boolean v537_cont = true;
           l42: while(true) {
-            v531_start = v531_start - 32;
-            int v534 = v531_start - 32;
-            ByteVector v535 = (ByteVector) ByteVector.SPECIES_256.fromArray(v6_inp, v534);
-            ByteVector v536 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)10);
-            VectorMask<?> v537 = v535.compare(VectorOperators.EQ, v536);
-            long v538_m = v537.toLong();
-            v533_cont = v538_m == 0L;
+            v535_start = v535_start - 32;
+            int v538 = v535_start - 32;
+            ByteVector v539 = (ByteVector) ByteVector.SPECIES_256.fromArray(v6_inp, v538);
+            ByteVector v540 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)10);
+            VectorMask<?> v541 = v539.compare(VectorOperators.EQ, v540);
+            long v542_m = v541.toLong();
+            v537_cont = v542_m == 0L;
             l44: {
               l43: {
-                if (!v533_cont) break l43;
+                if (!v537_cont) break l43;
                 if (1==1) break l44;
               }
-              int v539 = Long.numberOfLeadingZeros(v538_m);
-              int v540_c = v539 - 32;
-              v531_start = v531_start - v540_c;
+              int v543 = Long.numberOfLeadingZeros(v542_m);
+              int v544_c = v543 - 32;
+              v535_start = v535_start - v544_c;
             }
-            if (v533_cont) continue l42;
+            if (v537_cont) continue l42;
             break;
           }
-          main.Main.failed_long(v0_ident, v531_start, v522, v524);
+          main.Main.failed_long(v0_ident, v535_start, v526, v528);
           if (1==1) break l45;
         }
-        int v542 = Long.numberOfLeadingZeros(v529_m);
-        int v543_c = v542 - 48;
-        int v544 = v522 - v543_c;
-        ByteVector v545 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask_16, v543_c);
-        ByteVector v546 = v526.and(v545);
-        IntVector v547_hv = v546.reinterpretAsInts();
-        LongVector v548 = v547_hv.reinterpretAsLongs();
-        long v549 = v548.lane(1);
-        LongVector v550 = (LongVector) LongVector.SPECIES_128.broadcast(v549);
-        IntVector v551 = v550.reinterpretAsInts();
-        v547_hv = v547_hv.lanewise(VectorOperators.XOR, v551);
-        LongVector v552 = v547_hv.reinterpretAsLongs();
-        LongVector v553 = v552.lanewise(VectorOperators.LSHR, 32);
-        IntVector v554 = v553.reinterpretAsInts();
-        v547_hv = v547_hv.lanewise(VectorOperators.XOR, v554);
-        IntVector v555 = (v547_hv);
-        IntVector v556 = v555.lanewise(VectorOperators.ASHR, 16);
-        IntVector v557 = (v556);
-        v547_hv = v547_hv.lanewise(VectorOperators.XOR, v557);
-        int v558 = v547_hv.lane(0);
-        main.Main.failed_short(v0_ident, v544, v522, v524, v558);
+        int v546 = Long.numberOfLeadingZeros(v533_m);
+        int v547_c = v546 - 48;
+        int v548 = v526 - v547_c;
+        ByteVector v549 = (ByteVector) ByteVector.SPECIES_128.fromArray(c0_tail_mask_16, v547_c);
+        ByteVector v550 = v530.and(v549);
+        IntVector v551_hv = v550.reinterpretAsInts();
+        LongVector v552 = v551_hv.reinterpretAsLongs();
+        long v553 = v552.lane(1);
+        LongVector v554 = (LongVector) LongVector.SPECIES_128.broadcast(v553);
+        IntVector v555 = v554.reinterpretAsInts();
+        v551_hv = v551_hv.lanewise(VectorOperators.XOR, v555);
+        LongVector v556 = v551_hv.reinterpretAsLongs();
+        LongVector v557 = v556.lanewise(VectorOperators.LSHR, 32);
+        IntVector v558 = v557.reinterpretAsInts();
+        v551_hv = v551_hv.lanewise(VectorOperators.XOR, v558);
+        IntVector v559 = (v551_hv);
+        IntVector v560 = v559.lanewise(VectorOperators.ASHR, 16);
+        IntVector v561 = (v560);
+        v551_hv = v551_hv.lanewise(VectorOperators.XOR, v561);
+        int v562 = v551_hv.lane(0);
+        main.Main.failed_short(v0_ident, v548, v526, v528, v562);
       }
       if (1==1) continue l39;
       break;

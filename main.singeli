@@ -81,7 +81,7 @@ def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d,0x3131,0x
 def hash_vec{x:V & eltype{V}==i8} = {
   def HX = HASH~*V
   hv:= HX~~x
-  hv = mix{hv}
+  if (not is_java) hv = mix{hv}
   hv^= l128_upper_u64{hv}
   hv^= l128_shrb8{hv,4}
   hv^= hv >>{i32} 16
