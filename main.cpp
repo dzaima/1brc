@@ -19,8 +19,9 @@ typedef uint64_t ux;
 // hash table size minus one; start out small, expand to big one on a bunch of collisions
 constexpr int hash_mask_max = 0xffff;
 int hash_mask = 0xfff;
-int collision_counter = 0;
-constexpr int collision_heuristic = 100;
+#ifndef DEBUG
+  #define DEBUG 0
+#endif
 
 
 constexpr bool global_mmap = false;
@@ -128,9 +129,12 @@ static void add_short(ux nameStart, ux nameEnd, int sample, uint32_t hash) {
       break;
     }
     if (++idx == hashm + hashv_count) { // too many collisions, fall back to long map
-      add_long(nameStart, nameEnd, sample);
-      if (++collision_counter > collision_heuristic) {
-        collision_counter = INT_MIN;
+      if (hash_mask == hash_mask_max) {
+        add_long(nameStart, nameEnd, sample);
+      } else {
+        if (DEBUG) printf("too many collisions! expanding\n");
+        hash_mask = hash_mask_max; // 93% of existing hashmap entries essentially become dead sentinels. ¯\_(ツ)_/¯
+        add_short(nameStart, nameEnd, sample, hash); // try short path again, why not
       }
       return;
     }
@@ -237,8 +241,8 @@ int main(int argc, char* argv[]) {
   ux flen = lseek(fd, 0, SEEK_END);
   if (global_mmap) input = (char*)mmap(0, flen, PROT_READ, MAP_SHARED, fd, 0);
   
-  for (ux i = 0; i < hash_size(); i++) mapg_hash[i] = def_hash(i);
-  for (ux i = 0; i < hash_size(); i++) {
+  for (ux i = 0; i < hash_size_max; i++) mapg_hash[i] = def_hash(i);
+  for (ux i = 0; i < hash_size_max; i++) {
     mapg_data[i*4 + dt_min] = -9999;
     mapg_data[i*4 + dt_max] = -9999;
   }
