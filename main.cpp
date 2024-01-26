@@ -69,7 +69,7 @@ struct slow_ent {
   int64_t data[4];
 };
 
-constexpr uint32_t slow_mask = 0xffff;
+constexpr uint32_t slow_mask = 0x1fff; // less than 10k, but slow_size adds a buffer
 constexpr ux slow_size = slow_mask + 10000 + 128; // enough space for all names having hash 0xffff, plus a buffer for overread
 
 uint32_t slow_hash[slow_size]; // if 0, empty
@@ -79,15 +79,15 @@ uint32_t slow_filled_idxs[10000]; // for iterations over the slow table to be fa
 ux slow_count = 0;
 
 uint8_t name_not[256];
-static __m256i loadu(const char* ptr) { return _mm256_loadu_si256((__m256i*)ptr); }
+#define LOADU(P) _mm256_loadu_si256((__m256i*)(P))
 static bool eqname(const char* a, const char* b, ux n) {
   // return memcmp(a,b,n)==0;
   char* mask_start = (char*)(name_not+128-n);
-  __m256i ok0 = _mm256_cmpeq_epi8(loadu(a   ), loadu(b   )) | loadu(mask_start);
-  __m256i ok1 = _mm256_cmpeq_epi8(loadu(a+32), loadu(b+32)) | loadu(mask_start+32);
-  __m256i ok2 = _mm256_cmpeq_epi8(loadu(a+64), loadu(b+64)) | loadu(mask_start+64);
+  __m256i ok0 = _mm256_cmpeq_epi8(LOADU(a   ), LOADU(b   )) | LOADU(mask_start);
+  __m256i ok1 = _mm256_cmpeq_epi8(LOADU(a+32), LOADU(b+32)) | LOADU(mask_start+32);
+  __m256i ok2 = _mm256_cmpeq_epi8(LOADU(a+64), LOADU(b+64)) | LOADU(mask_start+64);
   if (RARE(n>=96)) ok2 = _mm256_and_si256(ok2,
-                _mm256_cmpeq_epi8(loadu(a+96), loadu(b+96)) | loadu(mask_start+96));
+                _mm256_cmpeq_epi8(LOADU(a+96), LOADU(b+96)) | LOADU(mask_start+96));
   __m256i ok = _mm256_and_si256(_mm256_and_si256(ok0,ok1), ok2);
   return _mm256_movemask_epi8(ok) == 0xffffffff;
 }
@@ -106,22 +106,30 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   r.data[dt_max] = -9999;
   return r.data;
 }
+
+static ux vec_find32(__m256i hashes, uint32_t target) {
+  return _mm256_movemask_ps((__m256)_mm256_cmpeq_epi32(hashes, _mm256_set1_epi32(target)));
+}
 static int64_t* get_data(std::string_view k, uint32_t hash) {
   STAT_INC(fl_cam, 1);
   ux len = k.size();
-  if (RARE(hash==0)) hash = 1; // hash 0 is used as default
   ux idx = hash & slow_mask;
   while (true) {
-    uint32_t found = slow_hash[idx];
-    if (RARE(found == 0)) return get_data_new(k, hash, idx);
-    if (found == hash) {
+    __m256i hashes = LOADU(slow_hash+idx);
+    ux found = vec_find32(hashes, hash);
+    if (LIKELY(found!=0)) {
+      idx+= __builtin_ctz(found);
       slow_ent& r = slow_table[idx];
       if (LIKELY(r.name_len == len) && LIKELY(eqname(r.name, k.data(), len))) {
         STAT_INC(fl_gdsum, idx - (hash & slow_mask));
         return r.data;
       }
+      idx++;
+    } else {
+      ux none = vec_find32(hashes, 0);
+      if (RARE(none!=0)) return get_data_new(k, hash, idx + __builtin_ctz(none));
+      idx+= 8;
     }
-    idx++;
   }
 }
 

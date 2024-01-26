@@ -114,7 +114,11 @@ def info_long{inp, end} = {
       if (should_hash) hashv^= v & tail_mask{VL, c}
     }
   } while (cont)
-  def hash_long_vec{x:T & width{T}==128} = extract{hash_vec{x}, 0}
+  def hash_long_vec{x:T & width{T}==128} = {
+    r:= extract{hash_vec{x}, 0}
+    if (rare{r==0}) r = 1
+    r
+  }
   def hash_long_vec{x:T & width{T}==256} = hash_long_vec{fold{^, halves{hashv}}}
   tup{start, if (should_hash) hash_long_vec{hashv} else 0}
 }
