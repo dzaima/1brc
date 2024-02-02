@@ -355,7 +355,7 @@ int main(int argc, char* argv[]) {
   
   
   char* thread_stats = nullptr;
-  if (num_threads > 1) {
+  if (true) { // num_threads>1 doesn't work as then there's no deduplication for entries appearing multiple times in the maps
     char** all_stats = new char*[num_threads];
     int* pids = new int[num_threads];
     int max_names = 10000;
