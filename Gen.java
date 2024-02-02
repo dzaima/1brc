@@ -784,8 +784,8 @@ public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_a
     l0: while(true) {
       boolean v5 = v4_i < 1000;
       if (!v5) break l1;
-      int v6 = v4_i * 8;
-      IntVector v7_v = (IntVector) IntVector.SPECIES_256.fromArray(v2_ai32, v6);
+      int v6 = v4_i * 4;
+      IntVector v7_v = (IntVector) IntVector.SPECIES_128.fromArray(v2_ai32, v6);
       v7_v.intoArray(v2_ai32, v6);
       v4_i = v4_i + 1;
       if (1==1) continue l0;

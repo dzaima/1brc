@@ -21,14 +21,15 @@ f = -O3
 ifeq ($(DEBUG_SYMBOLS),1)
 	f += -g
 endif
-obj/gen.o: gen.c header.h
+TARGET = -march=native
+obj/gen.o: gen.c gen_x86.c gen_arm.c header.h
 	@mkdir -p obj
-	$(CC)  $(f) -march=native -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
+	$(CC)  $(f) $(TARGET) -fno-strict-aliasing -c -I. -o obj/gen.o gen.c
 obj/main.o: main.cpp header.h
 	@mkdir -p obj
-	$(CXX) $(f) -march=native -fno-strict-aliasing -c -o obj/main.o main.cpp
+	$(CXX) $(f) $(TARGET) -fno-strict-aliasing -c -o obj/main.o main.cpp
 a.out: obj/gen.o obj/main.o
-	$(CXX) $(f) -o a.out obj/gen.o obj/main.o
+	$(CXX) $(f) $(TARGET) -o a.out obj/gen.o obj/main.o
 
 classes/main/Main.class: Gen.java Main.java
 	@mkdir -p classes
@@ -42,8 +43,11 @@ endif
 Gen.java: $(GEN_JAVA_DEPS)
 	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS) | ./$(SIJAVA)/emit_java.bqn Gen.java
 
-gen.c: $(GEN_C_DEPS)
-	@$(SINGELI) -a avx2 -l singeli-java=$(SIJAVA) main.singeli -o gen.c
+gen_x86.c: $(GEN_C_DEPS)
+	@$(SINGELI) -a avx2 -l singeli-java=$(SIJAVA) main.singeli -o gen_x86.c
+
+gen_arm.c: $(GEN_C_DEPS)
+	@$(SINGELI) -a aarch64 -l singeli-java=$(SIJAVA) main.singeli -o gen_arm.c
 
 java-ir:
 	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS)

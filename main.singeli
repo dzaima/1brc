@@ -1,13 +1,13 @@
 include 'singeli-java/base'
 include 'util/functionize'
 
-def bulk = 32 # byte count for maximum-parallel ops
+def bulk = if (is_arm) 16 else 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
 def interleaved = 3 # number of semicolon searches to interleave
 def bufmax = 1000
-def takes0{x} = match(x) { {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
+def takes0{x} = match(x) { {(16)} => 2; {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
-def HASHV = [if (is_java) 4 else 8]HASH # buckets to search
+def HASHV = [if (is_java or is_arm) 4 else 8]HASH # buckets to search
 def placeholder_idx{} = emit{u64,'','hash_mask_max'} + vcount{HASHV}
 
 # shift down by n bytes in the low 8 bytes of each 128-bit lane
@@ -217,13 +217,17 @@ def mask_newline{v:T & T==[16]i8} = {
 def VNI64 = [proc_bulk]i64
 def VNI16 = i16~*VNI64
 def VNI8  =  i8~*VNI64
-def parse_nums{buf:*i16, nums:NV8} = {
+def magic = 1 + (10<<16) + (100<<24) # https://curiouscoding.nl/posts/1brc/#parsing-using-a-single-multiplication-does-work-after-all-1-dot-48s
+def to_digits{v} = { # convert to digits, mapping '\n' and '.' to 0
+  if (is_java) __max{i8}{v -{i8} 48, 0} # no saturating ops
+  else __subs{u8}{v, 48}
+}
+def parse_nums{buf:*i16, inp, bufdata, bufS} = {
+  num_idxs:= load{VIX, bufdata, bufS}
+  nums:VNI8 = i8~*gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
+  
   def low8_64 = l128shufb_ident{VNI8} - cycle{vcount{VNI8}, range{8}} # shuf nums for low byte within i64
   
-  def to_digits{v} = { # convert to digits, mapping '\n' and '.' to 0
-    if (is_java) __max{i8}{v -{i8} 48, 0} # no saturating ops
-    else __subs{u8}{v, 48}
-  }
   
   def {num_off, each16} = {
     # nums     off aligned
@@ -247,7 +251,6 @@ def parse_nums{buf:*i16, nums:NV8} = {
       t32:= madd{t16,         cycle_make{VNI16, 10,1}}
       tup{2, i16~*t32}
     } else {
-      def magic = 1 + (10<<16) + (100<<24) # https://curiouscoding.nl/posts/1brc/#parsing-using-a-single-multiplication-does-work-after-all-1-dot-48s
       def mullo{a, b} = emit{[4]i64, '_mm256_mul_epi32', a, b}
       r:= mullo{aligned >>{u64} 32, [4]i64**magic} >>{u64} 24 &{u64} 1023
       tup{0, i16~*r}
@@ -261,7 +264,36 @@ def parse_nums{buf:*i16, nums:NV8} = {
   # each16 is now [16]i16~~{num0, *, *, *, num1, *, *, *, num2, *, *, *, num3, *, *, *}
   store{buf, 0, each16n} # make it available for dynamic lookup
   
-  num_off
+  {i} => i*4 + num_off
+}
+
+def parse_nums{buf:*i16, inp:*i8, bufdata, bufS if is_arm} = {
+  def bufc = bufdata+bufS
+  
+  def {neg, ps} = flip{each{{i} => {
+    inpp:= inp + load{bufc,i} + 1
+    neg:= load{inpp,0} == 45
+    inpp+= promote{ux,neg}
+    tup{neg, load{*u32~~inpp, 0}}
+  }, range{proc_bulk}}}
+  v:= make{[4]u32, ps}
+  
+  # a.b? ab.c
+  #  a.b ab.c
+  # 1012 0123
+  
+  def movev{...vs} = make{[16]u8, (range{16}>>2<<2) + cycle{16,vs}}
+  aligned:= sel{[16]u8, v, blend{movev{1,0,1,2}, movev{0,1,2,3}, (v=={u8}46) =={u32} 0x00ff0000}}
+  def {ml, mh} = mulw{u32~*to_digits{aligned}, [4]u32**magic}
+  res:= i32~*emit{[4]u32, 'vshrn_high_n_u64',
+    emit{[2]u32, 'vshrn_n_s64', ml, 24},
+    mh, 24
+  } &{u32} 1023
+  
+  res = blend{res, -res, make{[4]i32, each{{v} => -promote{i32,v}, neg}}}
+  
+  store{*u32~~buf, 0, res}
+  {i} => i*2
 }
 
 def bufstart{i} = i * bufmax2
@@ -376,7 +408,7 @@ fn core_1brc{branchless_fail}(
       def get_exp{idx} = load{VX, map_exp, idx*exp_bulk} # get expected name for index
       
       def left = if (branchless_fail) ofence{bufE-bufS} else 9
-      def get_temp{ij} = load{temp_buf, ij*4 + num_off}
+      def get_temp{ij} = load{temp_buf, num_off{ij}}
       def store_fail{ij, fail} = { # didn't find ij'th record in map
         if (rare{ij >= (if (branchless_fail) left else bufE-bufS)}) goto{buf_end}
         # log fail, to be processed later (so codegen of the fast path isn't pessimized by the presence of a call here)
@@ -410,7 +442,7 @@ fn core_1brc{branchless_fail}(
       } else tup{
         # Native
         1, # loadn
-        [32]i8, # T_hvs
+        [if (is_arm) 16 else 32]i8, # T_hvs
         [16]i8, # T_idxs
         1, # separate_idxs; alternative impl of T_idxs
       }
@@ -430,9 +462,7 @@ fn core_1brc{branchless_fail}(
       def exps = each{get_exp, idxs}
       
       # number parsing
-      num_idxs:= load{VIX, bufdata, bufS}
-      nums:= i8~*gather{i64, inp, 1, num_idxs, 1} # each 8-byte group is a number
-      def num_off = parse_nums{temp_buf, nums}
+      def num_off = parse_nums{temp_buf, inp, bufdata, bufS}
       
       # updating
       each{{ij, idx, got, exp} => {
@@ -480,7 +510,7 @@ export{'core_1brc', core_1brc{0}}
 
 (if (is_java or playground) {
   fn minibench(ai8:*i8, ai16:*i16, ai32:*i32, ai64:*i64) : void = @withbufs(object_arr) {
-    def VI8  = [32]i8;   def VU8  =  u8~*VI8
+    def VI8  = [16]i8;   def VU8  =  u8~*VI8
     def VI16 = i16~*VI8; def VU16 = u16~*VI8
     def VI32 = i32~*VI8; def VU32 = u32~*VI8
     def VI64 = i64~*VI8; def VU64 = u64~*VI8

@@ -1,6 +1,10 @@
 #include "header.h"
 
-#include <immintrin.h>
+#ifdef __aarch64__
+  #include <arm_neon.h>
+#else
+  #include <immintrin.h>
+#endif
 #include <cinttypes>
 #include <climits>
 #include <cmath>
@@ -91,17 +95,26 @@ static char* alloc_name(ux len) {
 }
 
 uint8_t name_not[256];
-#define LOADU(P) _mm256_loadu_si256((__m256i*)(P))
+#ifdef __aarch64__
+  #define LOADU(P) vld1q_s8((int8_t*)(P))
+  #define VECT int8x16_t
+#else
+  #define LOADU(P) _mm256_loadu_si256((__m256i*)(P))
+  #define VECT __m256i
+#endif
 static bool eqname(const char* a, const char* b, ux n) {
-  // return memcmp(a,b,n)==0;
-  char* mask_start = (char*)(name_not+128-n);
-  __m256i ok0 = _mm256_cmpeq_epi8(LOADU(a   ), LOADU(b   )) | LOADU(mask_start);
-  __m256i ok1 = _mm256_cmpeq_epi8(LOADU(a+32), LOADU(b+32)) | LOADU(mask_start+32);
-  __m256i ok2 = _mm256_cmpeq_epi8(LOADU(a+64), LOADU(b+64)) | LOADU(mask_start+64);
-  if (RARE(n>=96)) ok2 = _mm256_and_si256(ok2,
-                _mm256_cmpeq_epi8(LOADU(a+96), LOADU(b+96)) | LOADU(mask_start+96));
-  __m256i ok = _mm256_and_si256(_mm256_and_si256(ok0,ok1), ok2);
-  return _mm256_movemask_epi8(ok) == 0xffffffff;
+  #ifdef __aarch64__
+    return memcmp(a,b,n)==0;
+  #else
+    char* mask_start = (char*)(name_not+128-n);
+    __m256i ok0 = _mm256_cmpeq_epi8(LOADU(a   ), LOADU(b   )) | LOADU(mask_start);
+    __m256i ok1 = _mm256_cmpeq_epi8(LOADU(a+32), LOADU(b+32)) | LOADU(mask_start+32);
+    __m256i ok2 = _mm256_cmpeq_epi8(LOADU(a+64), LOADU(b+64)) | LOADU(mask_start+64);
+    if (RARE(n>=96)) ok2 = _mm256_and_si256(ok2,
+                  _mm256_cmpeq_epi8(LOADU(a+96), LOADU(b+96)) | LOADU(mask_start+96));
+    __m256i ok = _mm256_and_si256(_mm256_and_si256(ok0,ok1), ok2);
+    return _mm256_movemask_epi8(ok) == 0xffffffff;
+  #endif
 }
 
 static bool got_new;
@@ -121,18 +134,38 @@ static __attribute__((noinline)) int64_t* get_data_new(std::string_view k, uint3
   return r.data;
 }
 
-static ux vec_find32(__m256i hashes, uint32_t target) {
-  return _mm256_movemask_ps((__m256)_mm256_cmpeq_epi32(hashes, _mm256_set1_epi32(target)));
-}
+struct found_t { bool found; size_t idx; size_t scanned; };
+#ifdef __aarch64__
+  static found_t vec_find32(VECT hashes, uint32_t target) {
+    uint32_t iota_buf[4] = {1,2,3,4};
+    uint32x4_t mask = vceqq_s32((int32x4_t)hashes, vdupq_n_s32(target));
+    size_t idxp1 = vmaxvq_u32(vandq_u32(mask, vld1q_u32(iota_buf)));
+    
+    return (found_t){
+      idxp1!=0,
+      idxp1-1,
+      4
+    };
+  }
+#else
+  static found_t vec_find32(__m256i hashes, uint32_t target) {
+    int mask = _mm256_movemask_ps((__m256)_mm256_cmpeq_epi32(hashes, _mm256_set1_epi32(target)));
+    return (found_t){
+      mask!=0,
+      mask==0? 32 : (size_t)__builtin_ctz(mask),
+      8
+    };
+  }
+#endif
 static int64_t* get_data(std::string_view k, uint32_t hash) {
   STAT_INC(fl_cam, 1);
   ux len = k.size();
   ux idx = hash & slow_mask;
   while (true) {
-    __m256i hashes = LOADU(slow_hash+idx);
-    ux found = vec_find32(hashes, hash);
-    if (LIKELY(found!=0)) {
-      idx+= __builtin_ctz(found);
+    VECT hashes = LOADU(slow_hash+idx);
+    found_t found = vec_find32(hashes, hash);
+    if (LIKELY(found.found)) {
+      idx+= found.idx;
       slow_ent& r = slow_table[idx];
       if (LIKELY(r.name_len == len) && LIKELY(eqname(r.name, k.data(), len))) {
         STAT_INC(fl_gdsum, idx - (hash & slow_mask));
@@ -140,9 +173,9 @@ static int64_t* get_data(std::string_view k, uint32_t hash) {
       }
       idx++;
     } else {
-      ux none = vec_find32(hashes, 0);
-      if (RARE(none!=0)) return get_data_new(k, hash, idx + __builtin_ctz(none));
-      idx+= 8;
+      found_t none = vec_find32(hashes, 0);
+      if (RARE(none.found)) return get_data_new(k, hash, idx + none.idx);
+      idx+= found.scanned;
       STAT_INC(fl_far, 1);
     }
   }
