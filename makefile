@@ -49,6 +49,11 @@ gen_x86.c: $(GEN_C_DEPS)
 gen_arm.c: $(GEN_C_DEPS)
 	@$(SINGELI) -a aarch64 -l singeli-java=$(SIJAVA) main.singeli -o gen_arm.c
 
+
+gen-all:
+	@"$(MAKE)" gen-all-internal GEN=1
+gen-all-internal: Gen.java gen_x86.c gen_arm.c
+
 java-ir:
 	@$(SINGELI) -a x86_64 -t ir -l singeli-java=$(SIJAVA) main.singeli | $(IR_PASS)
 

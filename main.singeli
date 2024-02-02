@@ -300,7 +300,8 @@ def parse_nums{buf:*i16, inp:*i8, bufdata, bufS if is_arm} = {
 def bufstart{i} = i * bufmax2
 
 def ri = range{interleaved}
-def semisearch{takes}{inp, inpOff, bufdata, bufEnds} = {
+fn semisearch(inp:*i8, inpOff:ux, bufdata:*ux, bufEnds:*ux) = {
+  def takes = takes0{semi_bulk}
   def bufcs = each{new{ux}, each{bufstart, ri}}
   def inpcs = each{{i} => new{inpOff + i*semi_bulk}, ri}
   @for(i to iter_count{semi_bulk}) {
@@ -364,12 +365,9 @@ fn core_1brc{branchless_fail}(
   inp:*i8,
   inpOff:ux
 ) : void = @withbufs(object_arr) {
-  def takes = takes0{semi_bulk}
-  
   bufEnds:*ux = object_arr{ux, interleaved}
   
-  # semisearch{takes}{inp, inpOff, bufdata, bufcs}
-  functionize{semisearch{takes}}{inp, inpOff, bufdata, bufEnds}
+  semisearch(inp, inpOff, bufdata, bufEnds)
   def bufEnd{i} = load{bufEnds, i}
   
   

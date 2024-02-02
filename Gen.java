@@ -31,13 +31,179 @@ public int hash_1brc_short(byte[] v0_arr) {
   int v14 = v7_hv.lane(0);
   return v14;
 }
+public void f3_semisearch(byte[] v0_inp, int v1_inpOff, int[] v2_bufdata, int[] v3_bufEnds) {
+  int v4_new = 0;
+  int v5_new = 1004;
+  int v6_new = 2008;
+  int v7_new = v1_inpOff;
+  int v8_new = v1_inpOff + 32;
+  int v9_new = v1_inpOff + 64;
+  int v10_i = 0;
+  l1: {
+    l0: while(true) {
+      boolean v11 = v10_i < 111;
+      if (!v11) break l1;
+      ByteVector v12 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_inp, v7_new);
+      ByteVector v13 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
+      VectorMask<?> v14 = v12.compare(VectorOperators.EQ, v13);
+      long v15 = v14.toLong();
+      ByteVector v16 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_inp, v8_new);
+      ByteVector v17 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
+      VectorMask<?> v18 = v16.compare(VectorOperators.EQ, v17);
+      long v19 = v18.toLong();
+      ByteVector v20 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_inp, v9_new);
+      ByteVector v21 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
+      VectorMask<?> v22 = v20.compare(VectorOperators.EQ, v21);
+      long v23 = v22.toLong();
+      long v24_new = v15;
+      long v25_new = v19;
+      long v26_new = v23;
+      long v27 = v24_new - 1L;
+      long v28_m2 = v24_new & v27;
+      int v29 = Long.numberOfTrailingZeros(v24_new);
+      int v30 = v7_new + v29;
+      v2_bufdata[v4_new] = v30;
+      v24_new = v28_m2;
+      long v32 = v25_new - 1L;
+      long v33_m2 = v25_new & v32;
+      int v34 = Long.numberOfTrailingZeros(v25_new);
+      int v35 = v8_new + v34;
+      v2_bufdata[v5_new] = v35;
+      v25_new = v33_m2;
+      long v37 = v26_new - 1L;
+      long v38_m2 = v26_new & v37;
+      int v39 = Long.numberOfTrailingZeros(v26_new);
+      int v40 = v9_new + v39;
+      v2_bufdata[v6_new] = v40;
+      v26_new = v38_m2;
+      long v42 = v24_new - 1L;
+      long v43_m2 = v24_new & v42;
+      int v44 = v4_new + 1;
+      int v45 = Long.numberOfTrailingZeros(v24_new);
+      int v46 = v7_new + v45;
+      v2_bufdata[v44] = v46;
+      v24_new = v43_m2;
+      long v48 = v25_new - 1L;
+      long v49_m2 = v25_new & v48;
+      int v50 = v5_new + 1;
+      int v51 = Long.numberOfTrailingZeros(v25_new);
+      int v52 = v8_new + v51;
+      v2_bufdata[v50] = v52;
+      v25_new = v49_m2;
+      long v54 = v26_new - 1L;
+      long v55_m2 = v26_new & v54;
+      int v56 = v6_new + 1;
+      int v57 = Long.numberOfTrailingZeros(v26_new);
+      int v58 = v9_new + v57;
+      v2_bufdata[v56] = v58;
+      v26_new = v55_m2;
+      long v60 = v24_new - 1L;
+      long v61_m2 = v24_new & v60;
+      int v62 = v4_new + 2;
+      int v63 = Long.numberOfTrailingZeros(v24_new);
+      int v64 = v7_new + v63;
+      v2_bufdata[v62] = v64;
+      v24_new = v61_m2;
+      long v66 = v25_new - 1L;
+      long v67_m2 = v25_new & v66;
+      int v68 = v5_new + 2;
+      int v69 = Long.numberOfTrailingZeros(v25_new);
+      int v70 = v8_new + v69;
+      v2_bufdata[v68] = v70;
+      v25_new = v67_m2;
+      long v72 = v26_new - 1L;
+      long v73_m2 = v26_new & v72;
+      int v74 = v6_new + 2;
+      int v75 = Long.numberOfTrailingZeros(v26_new);
+      int v76 = v9_new + v75;
+      v2_bufdata[v74] = v76;
+      v26_new = v73_m2;
+      int v78_pop = Long.bitCount(v15);
+      boolean v79 = v78_pop > 3;
+      l4: {
+        l2: {
+          if (!v79) break l2;
+          v4_new = v4_new + 3;
+          l3: while(true) {
+            long v80 = v24_new - 1L;
+            long v81_m2 = v24_new & v80;
+            int v82 = Long.numberOfTrailingZeros(v24_new);
+            int v83 = v7_new + v82;
+            v2_bufdata[v4_new] = v83;
+            v24_new = v81_m2;
+            v4_new = v4_new + 1;
+            boolean v85 = v24_new != 0L;
+            if (v85) continue l3;
+            break;
+          }
+          if (1==1) break l4;
+        }
+        v4_new = v4_new + v78_pop;
+      }
+      v7_new = v7_new + 96;
+      int v86_pop = Long.bitCount(v19);
+      boolean v87 = v86_pop > 3;
+      l7: {
+        l5: {
+          if (!v87) break l5;
+          v5_new = v5_new + 3;
+          l6: while(true) {
+            long v88 = v25_new - 1L;
+            long v89_m2 = v25_new & v88;
+            int v90 = Long.numberOfTrailingZeros(v25_new);
+            int v91 = v8_new + v90;
+            v2_bufdata[v5_new] = v91;
+            v25_new = v89_m2;
+            v5_new = v5_new + 1;
+            boolean v93 = v25_new != 0L;
+            if (v93) continue l6;
+            break;
+          }
+          if (1==1) break l7;
+        }
+        v5_new = v5_new + v86_pop;
+      }
+      v8_new = v8_new + 96;
+      int v94_pop = Long.bitCount(v23);
+      boolean v95 = v94_pop > 3;
+      l10: {
+        l8: {
+          if (!v95) break l8;
+          v6_new = v6_new + 3;
+          l9: while(true) {
+            long v96 = v26_new - 1L;
+            long v97_m2 = v26_new & v96;
+            int v98 = Long.numberOfTrailingZeros(v26_new);
+            int v99 = v9_new + v98;
+            v2_bufdata[v6_new] = v99;
+            v26_new = v97_m2;
+            v6_new = v6_new + 1;
+            boolean v101 = v26_new != 0L;
+            if (v101) continue l9;
+            break;
+          }
+          if (1==1) break l10;
+        }
+        v6_new = v6_new + v94_pop;
+      }
+      v9_new = v9_new + 96;
+      v10_i = v10_i + 1;
+      if (1==1) continue l0;
+      break;
+    }
+  }
+  v3_bufEnds[0] = v4_new;
+  v3_bufEnds[1] = v5_new;
+  v3_bufEnds[2] = v6_new;
+  return;
+}
 private final int[] arr_1 = new int[3];
 private final short[] arr_2 = new short[]{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 private final int[] arr_3 = new int[6000];
 private final long[] arr_4 = new long[4];
 public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v3_map_exp, int[] v4_map_hash, long[] v5_map_data, byte[] v6_inp, int v7_inpOff) {
   int[] v8_bufEnds = arr_1;
-  f4_asfunc_generator_i8_i32_i32_i32(v6_inp, v7_inpOff, v1_bufdata, v8_bufEnds);
+  f3_semisearch(v6_inp, v7_inpOff, v1_bufdata, v8_bufEnds);
   int v10_semi = 0;
   int v11 = v8_bufEnds[0];
   boolean v12 = 0 != v11;
@@ -610,172 +776,6 @@ public void core_1brc(int v0_ident, int[] v1_bufdata, int v2_hash_mask, byte[] v
       break;
     }
   }
-  return;
-}
-public void f4_asfunc_generator_i8_i32_i32_i32(byte[] v0_a, int v1_a, int[] v2_a, int[] v3_a) {
-  int v4_new = 0;
-  int v5_new = 1004;
-  int v6_new = 2008;
-  int v7_new = v1_a;
-  int v8_new = v1_a + 32;
-  int v9_new = v1_a + 64;
-  int v10_i = 0;
-  l1: {
-    l0: while(true) {
-      boolean v11 = v10_i < 111;
-      if (!v11) break l1;
-      ByteVector v12 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_a, v7_new);
-      ByteVector v13 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
-      VectorMask<?> v14 = v12.compare(VectorOperators.EQ, v13);
-      long v15 = v14.toLong();
-      ByteVector v16 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_a, v8_new);
-      ByteVector v17 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
-      VectorMask<?> v18 = v16.compare(VectorOperators.EQ, v17);
-      long v19 = v18.toLong();
-      ByteVector v20 = (ByteVector) ByteVector.SPECIES_256.fromArray(v0_a, v9_new);
-      ByteVector v21 = (ByteVector) ByteVector.SPECIES_256.broadcast((byte)59);
-      VectorMask<?> v22 = v20.compare(VectorOperators.EQ, v21);
-      long v23 = v22.toLong();
-      long v24_new = v15;
-      long v25_new = v19;
-      long v26_new = v23;
-      long v27 = v24_new - 1L;
-      long v28_m2 = v24_new & v27;
-      int v29 = Long.numberOfTrailingZeros(v24_new);
-      int v30 = v7_new + v29;
-      v2_a[v4_new] = v30;
-      v24_new = v28_m2;
-      long v32 = v25_new - 1L;
-      long v33_m2 = v25_new & v32;
-      int v34 = Long.numberOfTrailingZeros(v25_new);
-      int v35 = v8_new + v34;
-      v2_a[v5_new] = v35;
-      v25_new = v33_m2;
-      long v37 = v26_new - 1L;
-      long v38_m2 = v26_new & v37;
-      int v39 = Long.numberOfTrailingZeros(v26_new);
-      int v40 = v9_new + v39;
-      v2_a[v6_new] = v40;
-      v26_new = v38_m2;
-      long v42 = v24_new - 1L;
-      long v43_m2 = v24_new & v42;
-      int v44 = v4_new + 1;
-      int v45 = Long.numberOfTrailingZeros(v24_new);
-      int v46 = v7_new + v45;
-      v2_a[v44] = v46;
-      v24_new = v43_m2;
-      long v48 = v25_new - 1L;
-      long v49_m2 = v25_new & v48;
-      int v50 = v5_new + 1;
-      int v51 = Long.numberOfTrailingZeros(v25_new);
-      int v52 = v8_new + v51;
-      v2_a[v50] = v52;
-      v25_new = v49_m2;
-      long v54 = v26_new - 1L;
-      long v55_m2 = v26_new & v54;
-      int v56 = v6_new + 1;
-      int v57 = Long.numberOfTrailingZeros(v26_new);
-      int v58 = v9_new + v57;
-      v2_a[v56] = v58;
-      v26_new = v55_m2;
-      long v60 = v24_new - 1L;
-      long v61_m2 = v24_new & v60;
-      int v62 = v4_new + 2;
-      int v63 = Long.numberOfTrailingZeros(v24_new);
-      int v64 = v7_new + v63;
-      v2_a[v62] = v64;
-      v24_new = v61_m2;
-      long v66 = v25_new - 1L;
-      long v67_m2 = v25_new & v66;
-      int v68 = v5_new + 2;
-      int v69 = Long.numberOfTrailingZeros(v25_new);
-      int v70 = v8_new + v69;
-      v2_a[v68] = v70;
-      v25_new = v67_m2;
-      long v72 = v26_new - 1L;
-      long v73_m2 = v26_new & v72;
-      int v74 = v6_new + 2;
-      int v75 = Long.numberOfTrailingZeros(v26_new);
-      int v76 = v9_new + v75;
-      v2_a[v74] = v76;
-      v26_new = v73_m2;
-      int v78_pop = Long.bitCount(v15);
-      boolean v79 = v78_pop > 3;
-      l4: {
-        l2: {
-          if (!v79) break l2;
-          v4_new = v4_new + 3;
-          l3: while(true) {
-            long v80 = v24_new - 1L;
-            long v81_m2 = v24_new & v80;
-            int v82 = Long.numberOfTrailingZeros(v24_new);
-            int v83 = v7_new + v82;
-            v2_a[v4_new] = v83;
-            v24_new = v81_m2;
-            v4_new = v4_new + 1;
-            boolean v85 = v24_new != 0L;
-            if (v85) continue l3;
-            break;
-          }
-          if (1==1) break l4;
-        }
-        v4_new = v4_new + v78_pop;
-      }
-      v7_new = v7_new + 96;
-      int v86_pop = Long.bitCount(v19);
-      boolean v87 = v86_pop > 3;
-      l7: {
-        l5: {
-          if (!v87) break l5;
-          v5_new = v5_new + 3;
-          l6: while(true) {
-            long v88 = v25_new - 1L;
-            long v89_m2 = v25_new & v88;
-            int v90 = Long.numberOfTrailingZeros(v25_new);
-            int v91 = v8_new + v90;
-            v2_a[v5_new] = v91;
-            v25_new = v89_m2;
-            v5_new = v5_new + 1;
-            boolean v93 = v25_new != 0L;
-            if (v93) continue l6;
-            break;
-          }
-          if (1==1) break l7;
-        }
-        v5_new = v5_new + v86_pop;
-      }
-      v8_new = v8_new + 96;
-      int v94_pop = Long.bitCount(v23);
-      boolean v95 = v94_pop > 3;
-      l10: {
-        l8: {
-          if (!v95) break l8;
-          v6_new = v6_new + 3;
-          l9: while(true) {
-            long v96 = v26_new - 1L;
-            long v97_m2 = v26_new & v96;
-            int v98 = Long.numberOfTrailingZeros(v26_new);
-            int v99 = v9_new + v98;
-            v2_a[v6_new] = v99;
-            v26_new = v97_m2;
-            v6_new = v6_new + 1;
-            boolean v101 = v26_new != 0L;
-            if (v101) continue l9;
-            break;
-          }
-          if (1==1) break l10;
-        }
-        v6_new = v6_new + v94_pop;
-      }
-      v9_new = v9_new + 96;
-      v10_i = v10_i + 1;
-      if (1==1) continue l0;
-      break;
-    }
-  }
-  v3_a[0] = v4_new;
-  v3_a[1] = v5_new;
-  v3_a[2] = v6_new;
   return;
 }
 public void minibench(byte[] v0_ai8, short[] v1_ai16, int[] v2_ai32, long[] v3_ai64) {
