@@ -3,19 +3,20 @@ include 'util/functionize'
 
 def bulk = if (is_arm) 16 else 32 # byte count for maximum-parallel ops
 def exp_bulk = 16 # maximum name length to handle in fast path
-def interleaved = 3 # number of semicolon searches to interleave
+def interleaved = if (is_arm) 4 else 3 # number of semicolon searches to interleave
+def semi_bulk = if (is_arm) 32 else bulk # bytes processed per single buffer
 def bufmax = 1000
 def takes0{x} = match(x) { {(16)} => 2; {(32)} => 3 } # max number of semicolons fast path of search should handle in N bytes
 def HASH = u32 # full hash
 def HASHV = [if (is_java or is_arm) 4 else 8]HASH # buckets to search
 def placeholder_idx{} = emit{u64,'','hash_mask_max'} + vcount{HASHV}
 
+def proc_bulk = 4 # number of records to handle in a processing iteration
+def VIX = [proc_bulk]vptr_store
+
 # shift down by n bytes in the low 8 bytes of each 128-bit lane
 def l128_shrb8{a:V, n} = l128shrb{a,n} # unused as-is, but could be better on some architectures
 def l128_shrb8{a:V, n} = a >>{u64} (n*8)
-
-def proc_bulk = 4 # number of records to handle in a processing iteration
-def VIX = [proc_bulk]vptr_store
 
 config playground = 0
 def one = playground
@@ -66,7 +67,7 @@ oper ~* re_el infix right 55
 
 def bufmax2 = bufmax+proc_bulk
 
-def periter = bulk * interleaved * iter_count{bulk}
+def periter = interleaved * semi_bulk * iter_count{semi_bulk}
 fn core_1brc_buf_elts() : ux = bufmax2 * interleaved
 fn core_1brc_periter() : ux = periter
 export{'core_1brc_buf_elts', core_1brc_buf_elts}
@@ -301,9 +302,20 @@ def bufstart{i} = i * bufmax2
 def ri = range{interleaved}
 def semisearch{takes}{inp, inpOff, bufdata, bufEnds} = {
   def bufcs = each{new{ux}, each{bufstart, ri}}
-  def inpcs = each{{i} => new{inpOff + i*bulk}, ri}
-  @for(i to iter_count{bulk}) {
-    def ms0 = each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
+  def inpcs = each{{i} => new{inpOff + i*semi_bulk}, ri}
+  @for(i to iter_count{semi_bulk}) {
+    def ms0 = if (is_arm) {
+      assert{bulk==16 and semi_bulk==32}
+      def vecs = join{each{{inpc} => {
+        each{{i} => load{[bulk]i8, inp, inpc + i*bulk} == 59, tup{0,1}}
+      }, inpcs}}
+      def ints = each{{c}=>homMask{...c}, split{4, vecs}}
+      join{each{{n} => {
+        each{{j} => cast_i{u32, n>>j}, range{2}*semi_bulk}
+      }, ints}}
+    } else {
+      each{{inpc} => homMask{load{[bulk]i8, inp, inpc} == 59}, inpcs}
+    }
     
     def ms = each{new, ms0}
     def adv_mask{bufc, inpc, m, j, m0tmp} = {
@@ -326,7 +338,7 @@ def semisearch{takes}{inp, inpOff, bufdata, bufEnds} = {
       } else {
         bufc+= pop
       }
-      inpc+= bulk*interleaved
+      inpc+= semi_bulk*interleaved
     }, ri, ms0, ms, bufcs, inpcs}
   }
   each{store{bufEnds, ., .}, ri, bufcs}

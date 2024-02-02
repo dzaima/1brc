@@ -238,7 +238,7 @@ if_inline (hasarch{'AVX2'}) {
     }, *void ~~ (ptr + ptrOff), idxs, scale}
   }
   
-} else if (hasarch{'AARCH64'}) {
+} else if_inline (hasarch{'AARCH64'}) {
   include 'arch/neon_intrin/basic'
   require{'arm_neon.h'}
   def nty{T} = {
@@ -300,6 +300,13 @@ if_inline (hasarch{'AVX2'}) {
   }
   def homMask{x:T & vecu{T} & elwidth{T}>=vcount{T}} = {
     truncBits{vcount{T}, fold_add{x & make{T, 1<<iota{vcount{T}}}}}
+  }
+  def homMask{a:T,b:T,c:T,d:T & T==[16]u8} = {
+    m:= make{[16]u8, 1<<(iota{16}&7)}
+    t1:= addp{a&m, b&m}
+    t2:= addp{c&m, d&m}
+    t3:= addp{t1, t2}
+    extract{[2]u64~~addp{t3,t3},0}
   }
 }
 def widen{E, x:V & E == eltype{V}} = x
