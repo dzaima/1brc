@@ -308,6 +308,7 @@ if_inline (hasarch{'AVX2'}) {
     t3:= addp{t1, t2}
     extract{[2]u64~~addp{t3,t3},0}
   }
+  def ofence{x} = x
 }
 def widen{E, x:V & E == eltype{V}} = x
 def pair{x:T} = x
