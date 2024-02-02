@@ -364,7 +364,7 @@ fn core_1brc{branchless_fail}(
   inp:*i8,
   inpOff:ux
 ) : void = @withbufs(object_arr) {
-  def takes = takes0{bulk}
+  def takes = takes0{semi_bulk}
   
   bufEnds:*ux = object_arr{ux, interleaved}
   
