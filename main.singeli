@@ -404,7 +404,7 @@ fn core_1brc{branchless_fail}(
           G{load{VX, inp, off-exp_bulk}}
         }
         if (is_java or n==1) {
-          def parts = each{ofence, for_vs{mask_newline}}
+          def parts = for_vs{mask_newline}
           tup{parts, pair{parts}}
         } else {
           def total = ofence{mask_newline{pair{for_vs{{x}=>x}}}}
