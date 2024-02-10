@@ -111,7 +111,7 @@ if_inline (hasarch{'X86_64'} and ~hasarch{'AVX2'}) {
   def rare{x} = x
   def likely{x} = x
   def unpredictable{x} = x
-  def ofence{x if is_java} = x
+  def ofence{x} = x
   def local_new{T, n} = emit{*T, '^newarray', n}
 } else {
   def ux = u64
