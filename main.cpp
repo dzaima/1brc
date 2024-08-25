@@ -200,7 +200,7 @@ static void merge_ent(std::string_view k, int64_t* new_data) {
   char* end = name_buf+512;
   char* start = end - k.size();
   start[0] = 10;
-  memcpy(start+1, k.data(), k.size());
+  memcpy(start+1, k.data(), k.size()-1);
   int64_t* map_data = get_data(k, hash_1brc_long((int8_t*)end));
   
   map_data[dt_sum]+= new_data[dt_sum];
