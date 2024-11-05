@@ -1,21 +1,21 @@
 def setpackage{x} = require{merge{'package ', x}}
 def ux = i32
-def __le{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
-def __lt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
-def __ge{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
-def __gt{x:T, y:T & 'u'==quality{T}} = fail{'no unsigned comparison'}
-def __shr{x:T, y  & 'u'==quality{T}} = emit{T, 'op >>>', x, y}
-def __shl{x:T, y & issigned{T} & width{T}<32} = cast_i{T, promote{i32,x} << y}
-def __min{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.min', a, b}
-def __max{a:T, b:T & (T==i32) | (T==i64)} = emit{T, 'Math.max', a, b}
+def __le{x:T, y:T if 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __lt{x:T, y:T if 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __ge{x:T, y:T if 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __gt{x:T, y:T if 'u'==quality{T}} = fail{'no unsigned comparison'}
+def __shr{x:T, y  if 'u'==quality{T}} = emit{T, 'op >>>', x, y}
+def __shl{x:T, y if issigned{T} and width{T}<32} = cast_i{T, promote{i32,x} << y}
+def __min{a:T, b:T if (T==i32) | (T==i64)} = emit{T, 'Math.min', a, b}
+def __max{a:T, b:T if (T==i32) | (T==i64)} = emit{T, 'Math.max', a, b}
 
 local def canon_i{T} = T
-local def canon_i{T & isprim{T}} = if ('f'==quality{T}) T else ty_s{T}
-local def canon_i{V & vece{V}} = [vcount{V}]canon_i{eltype{V}}
+local def canon_i{T if isprim{T}} = if ('f'==quality{T}) T else ty_s{T}
+local def canon_i{V if vece{V}} = [vcount{V}]canon_i{eltype{V}}
 
-def reinterpret{T, x & ~knum{x}} = fail{'no reinterpret ', T, x}
+def reinterpret{T, x if ~knum{x}} = fail{'no reinterpret ', T, x}
 def reinterpret{T, x:T} = x
-def reinterpret{R, x:X & R!=X & width{R}==width{X} & typekind{R}=='primitive' & typekind{X}=='primitive' & quality{R}!='f' & quality{X}!='f'} = emit{R, '', x}
+def reinterpret{R, x:X if R!=X and width{R}==width{X} and typekind{R}=='primitive' and typekind{X}=='primitive' and quality{R}!='f' and quality{X}!='f'} = emit{R, '', x}
 def java_cast{T, x} = {
   if (knum{x}) reinterpret{T, x}
   else emit{T, '^cast', x}
@@ -24,11 +24,11 @@ def java_cast{T, x:T} = x
 def cast_i{T, x} = java_cast{T, x}
 def promote{T, x:X} = fail{'bad promote', T, x}
 def promote{T, x:T} = x
-def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{X}!='u'} = java_cast{T,x}
-def promote{T, x:X & isprim{T} & isprim{X} & T>X & quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
-def promote{T, x:(u1) & T>u1} = emit{T, '^boolpromote', x}
+def promote{T, x:X if isprim{T} and isprim{X} and T>X and quality{X}!='u'} = java_cast{T,x}
+def promote{T, x:X if isprim{T} and isprim{X} and T>X and quality{T}=='u'} = java_cast{T,x} & ((1<<width{X}) - 1)
+def promote{T, x:(u1) if T>u1} = emit{T, '^boolpromote', x}
 local def isarr{A} = typekind{A}=='pointer'
-if (0) {
+if_inline (0) {
   require{'import sun.misc.Unsafe'}
   require{'import java.lang.reflect.Field'}
   require{'^unsafe'}
@@ -44,15 +44,15 @@ if (0) {
   local def offset{T} = emit{i32, '', merge{'Unsafe.ARRAY_', typecase{T,1}, '_BASE_OFFSET'}}
   local def calc_eoff{E, eoff} = offset{E} + eoff * (width{E}/8)
   local def putget{op, T} = merge{unsafe, '.', op, typecase{T,0}}
-  def load{T, arr:A, eoff & isprim{T}} = {
+  def load{T, arr:A, eoff if isprim{T}} = {
     def E = eltype{A}
     emit{T, putget{'get',T}, arr, calc_eoff{E,eoff}}
   }
   def unsafe_load64 = 1
   
   # replace load/store ops with ones that are unsafe; doesn't seem good
-  # def load{arr:A, eoff & isarr{A}} = load{eltype{A}, arr, eoff}
-  # def store{arr:A, eoff, v & isarr{A} & can_promote{eltype{A}, v}} = {
+  # def load{arr:A, eoff if isarr{A}} = load{eltype{A}, arr, eoff}
+  # def store{arr:A, eoff, v if isarr{A} and can_promote{eltype{A}, v}} = {
   #   def E = eltype{A}
   #   emit{void, putget{'put',E}, arr, calc_eoff{E,eoff}, v}
   # }
@@ -62,25 +62,25 @@ if (0) {
   def load{(i64), arr:*i8, eoff} = extract{re_el{i64, load{LD, arr, eoff}}, 0}
 }
 
-def static_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'static', 'init', ...vs}
-def object_arr{E, vs & ktup{vs}} = emit{*E, '^arr', 'object', 'init', ...vs}
-def static_arr{E, n & knum{n}} = emit{*E, '^arr', 'static', 'len', n}
-def object_arr{E, n & knum{n}} = emit{*E, '^arr', 'object', 'len', n}
-def function_arr{E, n & knum{n}} = emit{*E, '^atbegin', '^newarray', n}
+def static_arr{E, vs if ktup{vs}} = emit{*E, '^arr', 'static', 'init', ...vs}
+def object_arr{E, vs if ktup{vs}} = emit{*E, '^arr', 'object', 'init', ...vs}
+def static_arr{E, n if knum{n}} = emit{*E, '^arr', 'static', 'len', n}
+def object_arr{E, n if knum{n}} = emit{*E, '^arr', 'object', 'len', n}
+def function_arr{E, n if knum{n}} = emit{*E, '^atbegin', '^newarray', n}
 
 def jint{T} = (T==i32) | (T==u32)
-def popc{x:T & canon_i{T}==i64} = emit{i32, 'Long.bitCount', x}
-def popc{x:T & canon_i{T}==i32} = emit{i32, 'Integer.bitCount', x}
-def clz{n==32, x:T & canon_i{T}==i32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
-def clz{n==64, x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfLeadingZeros', x}
-def ctz{x:T & canon_i{T}==i64} = emit{i32, 'Long.numberOfTrailingZeros', x}
-def ctz{x:T & intty{T} & width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
+def popc{x:T if canon_i{T}==i64} = emit{i32, 'Long.bitCount', x}
+def popc{x:T if canon_i{T}==i32} = emit{i32, 'Integer.bitCount', x}
+def clz{n==32, x:T if canon_i{T}==i32} = emit{i32, 'Integer.numberOfLeadingZeros', x}
+def clz{n==64, x:T if canon_i{T}==i64} = emit{i32, 'Long.numberOfLeadingZeros', x}
+def ctz{x:T if canon_i{T}==i64} = emit{i32, 'Long.numberOfTrailingZeros', x}
+def ctz{x:T if intty{T} and width{T}<=32} = emit{i32, 'Integer.numberOfTrailingZeros', x}
 
 
 # vector things
 require{'import jdk.incubator.vector.*'}
 
-def reinterpret{R, x:X & R!=X & vece{R} & vece{X} & width{R}==width{X}} = {
+def reinterpret{R, x:X if R!=X and vece{R} and vece{X} and width{R}==width{X}} = {
   if (canon_i{R} == canon_i{X}) emit{R, '', x}
   else emit{R, merge{'method reinterpretAs', match(canon_i{eltype{R}}) {
     {(i8)}=>'Bytes'
@@ -94,34 +94,34 @@ def reinterpret{R, x:X & R!=X & vece{R} & vece{X} & width{R}==width{X}} = {
 
 local def lanewise{x:T, y, op} = emit{T, 'method lanewise', x, merge{'VectorOperators.',op}, y}
 
-def __add{x:T, y:T & vece{T}} = emit{T, 'method add', x, y}
-def __sub{x:T, y:T & vece{T}} = emit{T, 'method sub', x, y}
-def __mul{x:T, y:T & vece{T}} = emit{T, 'method mul', x, y}
+def __add{x:T, y:T if vece{T}} = emit{T, 'method add', x, y}
+def __sub{x:T, y:T if vece{T}} = emit{T, 'method sub', x, y}
+def __mul{x:T, y:T if vece{T}} = emit{T, 'method mul', x, y}
 
-def __min{x:T, y:T & vecs{T}} = emit{T, 'method min', x, y}
-def __max{x:T, y:T & vecs{T}} = emit{T, 'method max', x, y}
+def __min{x:T, y:T if vecs{T}} = emit{T, 'method min', x, y}
+def __max{x:T, y:T if vecs{T}} = emit{T, 'method max', x, y}
 
-def __or  {x:T, y:T & veci{T}} = emit{T, 'method or',  x, y}
-def __and {x:T, y:T & veci{T}} = emit{T, 'method and', x, y}
-def andnot{x:T, y:T & veci{T}} = lanewise{x, y, 'AND_NOT'}
-def __xor {x:T, y:T & veci{T}} = lanewise{x, y, 'XOR'}
-def __not{x:T & veci{T}} = emit{T, 'method not', x}
+def __or  {x:T, y:T if veci{T}} = emit{T, 'method or',  x, y}
+def __and {x:T, y:T if veci{T}} = emit{T, 'method and', x, y}
+def andnot{x:T, y:T if veci{T}} = lanewise{x, y, 'AND_NOT'}
+def __xor {x:T, y:T if veci{T}} = lanewise{x, y, 'XOR'}
+def __not{x:T if veci{T}} = emit{T, 'method not', x}
 
-def __shr{x:T, y & vecs{T}} = lanewise{x, y, 'ASHR'}
-def __shr{x:T, y & vecu{T}} = lanewise{x, y, 'LSHR'}
-def __shl{x:T, y & veci{T}} = lanewise{x, y, 'LSHL'}
+def __shr{x:T, y if vecs{T}} = lanewise{x, y, 'ASHR'}
+def __shr{x:T, y if vecu{T}} = lanewise{x, y, 'LSHR'}
+def __shl{x:T, y if veci{T}} = lanewise{x, y, 'LSHL'}
 
 def __subs{x,y} = fail{'no saturating arith'}
 
 local def cmpop{T, n} = merge{'VectorOperators.', if('u'==quality{eltype{T}}) 'UNSIGNED_' else '', n}
 local def elq{T, E} = eltype{T} == E
 local def elq{T, T} = 1
-def __gt{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GT'}, y}
-def __ge{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GE'}, y}
-def __lt{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LT'}, y}
-def __le{x:T, y:VE & veci{T} & elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LE'}, y}
-def __eq{x:T, y:T & vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.EQ', y}
-def __ne{x:T, y:T & vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.NE', y}
+def __gt{x:T, y:VE if veci{T} and elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GT'}, y}
+def __ge{x:T, y:VE if veci{T} and elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'GE'}, y}
+def __lt{x:T, y:VE if veci{T} and elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LT'}, y}
+def __le{x:T, y:VE if veci{T} and elq{T,VE}} = emit{tomask{T}, 'method compare', x, cmpop{T, 'LE'}, y}
+def __eq{x:T, y:T if vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.EQ', y}
+def __ne{x:T, y:T if vece{T}} = emit{tomask{T}, 'method compare', x, 'VectorOperators.NE', y}
 
 
 local def vecTypeStr{V} = merge{match(eltype{V}) {
@@ -131,15 +131,15 @@ local def vecTypeStr{V} = merge{match(eltype{V}) {
 local def species{V} = merge{vecTypeStr{V}, '.SPECIES_', fmtnat{width{V}}}
 
 def homMask{x:T} = emit{u64, 'method toLong', x}
-def broadcast{T, e & vece{T}} = emit{T, 'castmethod broadcast', T, species{T}, promote{eltype{T}, e}}
+def broadcast{T, e if vece{T}} = emit{T, 'castmethod broadcast', T, species{T}, promote{eltype{T}, e}}
 
 local def arroff{A, V, off} = if (vece{V} and isarr{A} and eltype{A}==eltype{V}) 1 else 0
-def load{V, arr:A, off & arroff{A, V, off}} = emit{V, 'castmethod fromArray', V, species{V}, arr, off}
-def store{arr:A, off, x:V & arroff{A, V, off}} = emit{void, 'method intoArray', x, arr, off}
-def extract{v:V, i & vecb{V}} = emit{u1, 'method laneIsSet', v, i}
-def extract{v:V, i & vece{V}} = emit{eltype{V}, 'method lane', v, i}
+def load{V, arr:A, off if arroff{A, V, off}} = emit{V, 'castmethod fromArray', V, species{V}, arr, off}
+def store{arr:A, off, x:V if arroff{A, V, off}} = emit{void, 'method intoArray', x, arr, off}
+def extract{v:V, i if vecb{V}} = emit{u1, 'method laneIsSet', v, i}
+def extract{v:V, i if vece{V}} = emit{eltype{V}, 'method lane', v, i}
 
-def gather{E, arr:P, ptrOff, idxs:V, scale & scale*8 == width{E}} = {
+def gather{E, arr:P, ptrOff, idxs:V, scale if scale*8 == width{E}} = {
   def buf = getenv{'buf_i32'}
   store{buf, 0, idxs}
   def n = vcount{V}
@@ -148,7 +148,7 @@ def gather{E, arr:P, ptrOff, idxs:V, scale & scale*8 == width{E}} = {
 }
 
 # horrible emulation of an unaligned little-endian gather
-def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 & V==[4]i32} = {
+def gather{(i64), arr:*i8, ptrOff, idxs:V, scale==1 if V==[4]i32} = {
   idxs2:= idxs + ptrOff
   make{[4]i64, each{{i} => load{i64, arr, extract{idxs2,i}}, range{4}}}
 }
@@ -175,31 +175,31 @@ def l128shufb{v:V, i:I} = {
 }
 def l128shufb_mask{T} = vcount{T}-1
 
-def shuf{L, v:V, ...is & width{L}==width{V}} = {
+def shuf{L, v:V, ...is if width{L}==width{V}} = {
   def S = shuf_type{L}
   V~~emit{L, 'method rearrange', L~~v, emit{S, '^atbegin', 'method shuffleFromValues', species{L}, ...is}}
 }
 
 # significant speedup by replacing a [2]u64 shuf with an equivalent [4]u32 one
 # default: ~60ns; first one here: ~4.4ns; second one: ~0.85ns
-def shuf{([2]u64), x:V, ...is & width{V}==128 & tuplen{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
-def shuf{([2]u64), x:V, i, i & width{V}==128} = V~~[2]u64**extract{[2]u64~~x, i}
+def shuf{([2]u64), x:V, ...is if width{V}==128 and length{is}==2} = shuf{[4]u32, x, ...join{each{{i}=>i*2 + tup{0,1}, is}}}
+def shuf{([2]u64), x:V, i, i if width{V}==128} = V~~[2]u64**extract{[2]u64~~x, i}
 
-def make{V, els & vcount{V}==tuplen{els}} = {
+def make{V, els if vcount{V}==length{els}} = {
   if (fold{&, each{knum, els}}) {
     def buf = static_arr{eltype{V}, els}
     load{V, buf, 0}
   } else {
     def buf = getenv{'make_buf'}{eltype{V}, vcount{V}}
-    each{{i,e} => store{buf,i,e}, range{tuplen{els}}, els}
+    each{{i,e} => store{buf,i,e}, range{length{els}}, els}
     load{V, buf, 0}
   }
 }
 
 local def reinterpret_shape{R, x:T, p} = emit{R, 'castmethod reinterpretShape', R, x, species{R}, p}
-def pair{...vs & hastype{select{vs,0}}} = {
+def pair{...vs if hastype{select{vs,0}}} = {
   def T = type{select{vs,0}}
-  def n = tuplen{vs}
+  def n = length{vs}
   def R = [vcount{T}*n]eltype{T}
   tree_fold{|, each{{v,i} => reinterpret_shape{R, v, -i}, vs, range{n}}}
 }
@@ -210,11 +210,11 @@ def half{a:T, i} = {
 
 def display{a, b} = {}
 def printstr{a} = {}
-def printf{...vs} = if (tuplen{vs}>0) {
+def printf{...vs} = if (length{vs}>0) {
   def syms = each{{v} => ~ksym{v}, vs}
   def space = merge{each{
     {i, s0} => s0 & select{syms,i+1},
-    range{tuplen{vs}-1}, slice{syms,0,-1}
+    range{length{vs}-1}, slice{syms,0,-1}
   }, 0}
   each{
     {o} => emit{void, 'System.out.print', if (ksym{o}) merge{'"',o,'"'} else o},
