@@ -122,9 +122,9 @@ if_inline (hasarch{'X86_64'} and ~hasarch{'AVX2'}) {
   def popc{x:T if isint{T} and width{T}==64} = emit{ux, '__builtin_popcountll', x}
   def popc{x:T if isint{T} and width{T}<=32} = emit{ux, '__builtin_popcount', to_u32{x}}
   
-  def rare{x:u1} = emit{u1, '__builtin_expect', x, 0}
-  def likely{x:u1} = emit{u1, '__builtin_expect', x, 1}
-  def unpredictable{x:u1} = emit{u1, '__builtin_unpredictable', x}
+  def rare{x:(u1)} = emit{u1, '__builtin_expect', x, 0}
+  def likely{x:(u1)} = emit{u1, '__builtin_expect', x, 1}
+  def unpredictable{x:(u1)} = emit{u1, '__builtin_unpredictable', x}
   
   # optimization fences
   def ofence{x:T if isprim{T}} = emit{T, 'OFENCE_G', x}
