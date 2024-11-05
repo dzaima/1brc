@@ -30,16 +30,16 @@ local def retype_cond{C} = isprim{C}|veca{C}
 local def retype_type{C, T} = if (veca{C}) C else re_el{C, T}
 local def autoexp{V,e} = if (veca{V} and (knum{e} or hastype{e,eltype{V}})) 1 else 0
 local def extend vecfn{op} = {
-  def op{C & retype_cond{C}} = {
+  def op{C if retype_cond{C}} = {
     def c{T} = retype_type{C, T}
-    def me{a:V, b & autoexp{c{V},b}} = V~~op{c{V}~~a, c{V}**b}
-    def me{a, b:V & autoexp{c{V},a}} = V~~op{c{V}**a, c{V}~~b}
-    def me{a:V,    b:c{V}} = V~~op{c{V}~~a, b}
-    def me{a:c{V}, b:V   } = V~~op{a, c{V}~~b}
-    def me{a:V,    b:V   } = V~~op{c{V}~~a, c{V}~~b}
+    def me{a:V, b if autoexp{c{V},b}} = V~~op{c{V}~~a, c{V}**b}
+    def me{a, b:V if autoexp{c{V},a}} = V~~op{c{V}**a, c{V}~~b}
+    def me{a:V,      b:(c{V})} = V~~op{c{V}~~a, b}
+    def me{a:(c{V}), b:V     } = V~~op{a, c{V}~~b}
+    def me{a:V,      b:V     } = V~~op{c{V}~~a, c{V}~~b}
   }
-  def op{a:V, b   & autoexp{V,b}} = op{a, V**b}
-  def op{a,   b:V & autoexp{V,a}} = op{V**a, b}
+  def op{a:V, b   if autoexp{V,b}} = op{a, V**b}
+  def op{a,   b:V if autoexp{V,a}} = op{V**a, b}
 }
 extend ({...f}=>each{vecfn,f}){
   __add, __sub, __mul, __div, __mod,
@@ -48,18 +48,18 @@ extend ({...f}=>each{vecfn,f}){
   __min, __max, __subs, __adds,
 }
 local def extend retypeShift{op} = {
-  def op{C & retype_cond{C}} = {
+  def op{C if retype_cond{C}} = {
     def c{T} = retype_type{C, T}
-    def me{a:V,    b:c{V}}   = V~~op{c{V}~~a, b}
-    def me{a:c{V}, b:V   }   = V~~op{a, c{V}~~b}
-    def me{a:V,    b:V   }   = V~~op{c{V}~~a, c{V}~~b}
-    def me{a:V, b & knum{b}} = V~~op{c{V}~~a, b}
+    def me{a:V,       b:(c{V})}   = V~~op{c{V}~~a, b}
+    def me{a:(c{V}),  b:V     }   = V~~op{a, c{V}~~b}
+    def me{a:V,       b:V     }   = V~~op{c{V}~~a, c{V}~~b}
+    def me{a:V, b if knum{b}} = V~~op{c{V}~~a, b}
   }
 }
 extend retypeShift{__shr}
 extend retypeShift{__shl}
-def l128_upper_u64{x:T & width{T}==128} = shuf{[2]u64, x, 1, 1}
-def l128_upper_u64{x:T & width{T}==256} = shuf{[4]u64, x, 1, 1, 3, 3}
+def l128_upper_u64{x:T if width{T}==128} = shuf{[2]u64, x, 1, 1}
+def l128_upper_u64{x:T if width{T}==256} = shuf{[4]u64, x, 1, 1, 3, 3}
 def cycle_make{V, ...vs} = make{V, cycle{vcount{V}, vs}}
 
 def iter_count{bulk} = (bufmax/(interleaved*takes0{bulk})) >> 0
@@ -80,7 +80,7 @@ def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d}
 # def mix{x:T} = x *{u16} cycle_make{u16~*T, 0x3343,0xf7a9,0x895b,0x318d,0x3131,0x99a3,0xe137,0x0734}
 
 
-def hash_vec64{x:V & eltype{V}==HASH} = { # hash each 64-bit lane, each such being high64^low64
+def hash_vec64{x:V if eltype{V}==HASH} = { # hash each 64-bit lane, each such being high64^low64
   hv:= x
   if (not is_java) hv = mix{hv}
   hv^= l128_shrb8{hv,4}
@@ -88,7 +88,7 @@ def hash_vec64{x:V & eltype{V}==HASH} = { # hash each 64-bit lane, each such bei
   hv # &{u32} 255 # for testing hash collision behavior
   # hv |{i32} -256
 }
-def hash_vec{x:V & eltype{V}==i8} = { # hash each 128-bit lane
+def hash_vec{x:V if eltype{V}==i8} = { # hash each 128-bit lane
   def HX = HASH~*V
   hv:= HX~~x
   # if (not is_java) hv = mix{hv}
@@ -166,12 +166,12 @@ def info_long{inp, end} = {
       if (should_hash) hashv^= v & tail_mask{VL, c}
     }
   } while (cont)
-  def hash_long_vec{x:T & width{T}==128} = {
+  def hash_long_vec{x:T if width{T}==128} = {
     r:= extract{hash_vec{x}, 0}
     if (rare{r==0}) r = 1
     r
   }
-  def hash_long_vec{x:T & width{T}==256} = hash_long_vec{fold{^, halves{hashv}}}
+  def hash_long_vec{x:T if width{T}==256} = hash_long_vec{fold{^, halves{hashv}}}
   tup{start, if (should_hash) hash_long_vec{hashv} else 0}
 }
 
@@ -185,7 +185,7 @@ def info_long{inp, end} = {
 
 
 
-def mask_newline{v:T & T==[32]i8} = {
+def mask_newline{v:T if T==[32]i8} = {
   def V64 = u64~*T
   a:= V64~~v_eq{v, 10}
   l:= if (is_java) l128_upper_u64{a} & cycle_make{V64, -1,0}
@@ -202,7 +202,7 @@ def mask_newline{v:T & T==[32]i8} = {
   }
 }
 # def mask_newline{v:T & T==[32]i8} = pair{each{mask_newline, halves{v}}}
-def mask_newline{v:T & T==[16]i8} = {
+def mask_newline{v:T==[16]i8} = {
   mc:= homMask{v == 10}
   def mw = width{type{mc}}
   def d = mw - exp_bulk
@@ -456,8 +456,8 @@ fn core_1brc{branchless_fail}(
         def me{T==[16]i8} = H{}
         def me{T==[32]i8} = D{}
       }
-      def mk{vs & width{type{select{vs,0}}}==256} = mk{{}=>vs, {}=>join{each{halves,vs}}}
-      def mk{vs & width{type{select{vs,0}}}==128} = mk{{}=>each{pair, split{2,vs}}, {}=>vs}
+      def mk{vs if width{type{select{vs,0}}}==256} = mk{{}=>vs, {}=>join{each{halves,vs}}}
+      def mk{vs if width{type{select{vs,0}}}==128} = mk{{}=>each{pair, split{2,vs}}, {}=>vs}
       
       def {partss, totals} = flip{each{maskload{loadn,.}, range{proc_bulk/loadn}*loadn}}
       def r_masked = mk{{} => mk{totals}{[32]i8}, {} => join{partss}}
